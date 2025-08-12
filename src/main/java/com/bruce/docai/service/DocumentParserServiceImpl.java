@@ -12,13 +12,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
 @Service
-class DocumentParserServiceImpl implements DocumentParserService{
+class DocumentParserServiceImpl implements DocumentService{
 
     @Override
-    public String parse(MultipartFile file) throws IOException {
+    public String processFile(MultipartFile file) throws IOException {
         String type = file.getContentType();
         if (type != null && type.contains("pdf")) {
-            return parsePdf(file);
+//            return parsePdf(file);
         } else if (type != null && type.contains("word")) {
             return parseWord(file);
         }
@@ -33,9 +33,9 @@ class DocumentParserServiceImpl implements DocumentParserService{
         }
     }
 
-    private String parsePdf(MultipartFile file) throws IOException {
-        try (PDDocument doc = PDDocument.load(file.getInputStream())) {
-            return new PDFTextStripper().getText(doc);
-        }
-    }
+//    private String parsePdf(MultipartFile file) throws IOException {
+//        try (PDDocument doc = PDDocument (file.getInputStream())) {
+//            return new PDFTextStripper().getText(doc);
+//        }
+//    }
 }
