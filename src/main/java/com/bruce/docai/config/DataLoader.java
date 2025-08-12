@@ -2,6 +2,7 @@ package com.bruce.docai.config;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class DataLoader {
 
     private final VectorStore vectorStore;
@@ -27,7 +29,8 @@ public class DataLoader {
                 .query(Integer.class)
                 .single();
 
-        System.out.println("No of Records in the PG Vectore Store: " +count);
+
+        log.info("No of Records in the PG Vectore Store: {}", count );
         if (count == 0) {
             System.out.println("Loading personal resume");
             PdfDocumentReaderConfig config = PdfDocumentReaderConfig.builder()
@@ -39,7 +42,7 @@ public class DataLoader {
             var textSplitter = new TokenTextSplitter();
             vectorStore.accept(textSplitter.apply(reader.get()));
 
-            System.out.println("Application is ready to serve the request");
+            log.info("Application is ready to serve the request");
         }
     }
 }
