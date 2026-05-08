@@ -1,0 +1,25 @@
+spring.application.name: docai
+spring:
+  sql:
+    init:
+      mode: always
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ics
+    username: postgres
+    password: postgres
+  ai:
+    ollama:
+      base-url: http://localhost:11434/
+      model: llama3
+      chat.options.model: llama3
+#      init:
+#        pull-model-strategy: always
+    vectorstore:
+      pgvector:
+      index-type: HNSW
+      distance-type: COSINE_DISTANCE
+      dimensions: 1536
+      max-document-batch-size: 10000 # Optional: Maximum number of documents per batch
+
+
+
