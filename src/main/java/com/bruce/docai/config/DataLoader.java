@@ -39,7 +39,9 @@ public class DataLoader {
             PagePdfDocumentReader reader = new PagePdfDocumentReader(pdfResource, config);
 
 
-            var textSplitter = new TokenTextSplitter();
+            var textSplitter = new TokenTextSplitter(
+                    300, 100, 100, 200, true
+            );
             vectorStore.accept(textSplitter.apply(reader.get()));
 
             log.info("Application is ready to serve the request");

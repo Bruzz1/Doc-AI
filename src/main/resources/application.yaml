@@ -8,12 +8,19 @@ spring:
     username: postgres
     password: postgres
   ai:
+    chat:
+      provider: ollama
     ollama:
       base-url: http://localhost:11434/
       model: llama3
-      chat.options.model: llama3
-#      init:
+      chat.options.model: llama3.2
+#      embedding.options.model: llama3
+    #      init:
 #        pull-model-strategy: always
+#    chat:
+#      provider: openai
+#    openai:
+#      api-key: ${OPENAI_API_KEY}
     vectorstore:
       pgvector:
       index-type: HNSW

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise AI Assistant</title>
+    <!-- Google Fonts for a modern, clean look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- For your local project, uncomment the line below and remove the <style> block -->
+     <link rel="stylesheet" href="/style.css" />
+
+</head>
+<body>
+
+<div id="main-wrapper">
+    <!-- Left Navigation / Tenant Sidebar -->
+    <aside class="sidebar">
+        <div class="tenant-section">
+            <!-- Business/Tenant Logo Placeholder -->
+            <div class="tenant-logo">
+                <!-- Fallback Text Logo or <img> tag can go here -->
+                <span>B</span>
+            </div>
+            <div class="tenant-info">
+                <div class="tenant-name" th:text="${tenantName != null ? tenantName : 'Boostware'}">Company Name</div>
+                <div class="tenant-tag">Enterprise Workspace</div>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            Powered by Spring AI & pgvector
+        </div>
+    </aside>
+
+    <!-- Main Chat Content Space -->
+    <main class="chat-workspace">
+        <header class="workspace-header">
+            <div class="header-title">
+                <h1>AI Chatbot</h1>
+            </div>
+
+            <!-- Context toggle moved to header for a cleaner top bar placement -->
+            <div id="mode-toggle-container">
+                <span class="toggle-label" id="mode-label">Mode: RAG</span>
+                <label class="switch">
+                    <input type="checkbox" id="mode-toggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </header>
+
+        <!-- Messages Area -->
+        <div id="chat-container">
+            <!-- System Welcome Message -->
+            <div class="message ai-message">
+                Hello! How can I help you with our company database and tools today?
+            </div>
+        </div>
+
+        <!-- Chat Input Deck -->
+        <footer id="input-area">
+            <div class="input-wrapper">
+                <div id="input-row">
+                    <input id="user-input" type="text" placeholder="Ask a business query..." autocomplete="off" />
+                    <button id="send-btn">Send</button>
+                </div>
+            </div>
+        </footer>
+    </main>
+</div>
+
+<script>
+    const chatContainer = document.getElementById('chat-container');
+    const input = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const modeToggle = document.getElementById('mode-toggle');
+    const modeLabel = document.getElementById('mode-label');
+
+    function appendMessage(text, className) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message ' + className;
+      msgDiv.textContent = text;
+      chatContainer.appendChild(msgDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return msgDiv;
+    }
+
+    function createTypingBubble() {
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'message ai-message typing';
+
+      for (let i = 0; i < 3; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'typing-dot';
+        typingDiv.appendChild(dot);
+      }
+      chatContainer.appendChild(typingDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return typingDiv;
+    }
+
+    function getSelectedEndpoint() {
+      return modeToggle.checked ? '/faqs' : '/chat';
+    }
+
+    function updateModeLabel() {
+      modeLabel.textContent = 'Mode: ' + (modeToggle.checked ? 'RAG' : 'Chat');
+    }
+
+    function typeEffect(element, text, speed = 20) {
+      let index = 0;
+      element.textContent = '';
+      const interval = setInterval(() => {
+        if (index < text.length) {
+          element.textContent += text.charAt(index);
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+          index++;
+        } else {
+          clearInterval(interval);
+        }
+      }, speed);
+    }
+
+    async function sendMessage() {
+      const userQuestion = input.value.trim();
+      if (!userQuestion) return;
+
+      appendMessage(userQuestion, 'user-message');
+
+      input.value = '';
+      sendBtn.disabled = true;
+
+      const endpoint = getSelectedEndpoint();
+      const paramName = endpoint === '/chat' ? 'message' : 'question';
+      const url = `${endpoint}?${paramName}=${encodeURIComponent(userQuestion)}`;
+
+      const aiMsgDiv = createTypingBubble();
+
+      try {
+        const response = await fetch(url);
+        const answer = await response.text();
+
+        // Stop typing animation and show answer typed out
+        aiMsgDiv.textContent = '';
+        aiMsgDiv.classList.remove('typing');
+        typeEffect(aiMsgDiv, answer);
+      } catch (e) {
+        aiMsgDiv.textContent = 'Error: Could not get response from server.';
+        aiMsgDiv.classList.remove('typing');
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    modeToggle.addEventListener('change', updateModeLabel);
+
+    updateModeLabel();
+    input.focus();
+</script>
+
+</body>
+</html>
