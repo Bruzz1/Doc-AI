@@ -1,19 +1,14 @@
 package com.bruce.docai.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.ollama.OllamaChatModel;
-import org.springframework.ai.ollama.api.OllamaModel;
-import org.springframework.ai.ollama.api.OllamaOptions;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,9 +19,32 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ChatService {
 
+    private static final String PROMPT_TEMPLATE = """
+            You are a helpful assistant. Answer the user's question using ONLY the information provided in the DOCUMENTS section below.
+            Respond confidently and directly. Do not mention or reference the documents explicitly
+            (e.g., avoid phrases like "based on the documents" or "according to the provided information").
+
+            If the answer cannot be found in the documents, respond with:
+            "I don't have enough information to answer that question."
+
+            QUESTION:
+            {input}
+
+            DOCUMENTS:
+            {documents}
+
+            SOURCES:
+            {sources}
+            """;
+
     private final ChatClient chatClient;
     private final VectorStore vectorStore;
 
+    @Value("${app.rag.top-k:4}")
+    private int topK;
+
+    @Value("${app.rag.similarity-threshold:0.6}")
+    private double similarityThreshold;
 
     public ChatService(ChatClient.Builder chatClient, VectorStore vectorStore) {
         this.chatClient = chatClient.build();
@@ -46,55 +64,43 @@ public class ChatService {
     public String getKnownInfo(String question) {
         long start = System.currentTimeMillis();
 
-        PromptTemplate template = getPromptTemplate();
+        List<Document> documents = findSimilarDocuments(question);
+        long afterSearch = System.currentTimeMillis();
 
+        String context = documents.stream()
+                .map(Document::getText)
+                .collect(Collectors.joining("\n\n"));
+
+        String sources = documents.stream()
+                .map(doc -> {
+                    Object filename = doc.getMetadata().get("filename");
+                    return filename != null ? filename.toString() : "unknown";
+                })
+                .distinct()
+                .collect(Collectors.joining(", "));
+
+        log.info("Prompt context length: {} chars | Sources: {}", context.length(), sources);
+
+        PromptTemplate template = new PromptTemplate(PROMPT_TEMPLATE);
         Map<String, Object> promptsParam = new HashMap<>();
         promptsParam.put("input", question);
-        promptsParam.put("documents", findSimilarData(question));
-        long afterSearch = System.currentTimeMillis();
+        promptsParam.put("documents", context);
+        promptsParam.put("sources", sources);
 
         String result = chatClient.prompt(template.create(promptsParam)).call().content();
 
         long afterLLM = System.currentTimeMillis();
+        log.info("Search took: {} ms | LLM call took: {} ms", (afterSearch - start), (afterLLM - afterSearch));
 
-        log.info("Search took: {} ms", (afterSearch - start));
-        log.info("LLM call took: {} ms", (afterLLM - afterSearch));
-        return  result;
-
-
+        return result;
     }
 
-    private static PromptTemplate getPromptTemplate() {
-        String prompt = """
-                You are tasked with answering a question about Roland Jay (RJ) Bruce, the developer of this application.
-                Use only the information provided in the DOCUMENTS section to answer. Respond confidently and directly—do not 
-                mention or reference the documents, even implicitly (e.g., avoid phrases like "based on the documents" or "according 
-                to the information provided").
-                
-                If the answer is not found or is unclear from the documents, respond with:
-                "The answer is not available in the provided documents."
-                
-                QUESTION:
-                {input}
-                
-                DOCUMENTS:
-                {documents}
-                """;
-        PromptTemplate template = new PromptTemplate(prompt);
-        return template;
-    }
-
-    private Object findSimilarData(String question) {
-        List<Document> documents = vectorStore.similaritySearch(SearchRequest.builder()
+    private List<Document> findSimilarDocuments(String question) {
+        return vectorStore.similaritySearch(SearchRequest.builder()
                 .query(question)
-                .topK(2)
+                .topK(topK)
+                .similarityThreshold(similarityThreshold)
                 .build());
-
-        String context = documents.stream()
-                .map(Document::getText)
-                .collect(Collectors.joining());
-        log.info("Prompt token length: "+context.length());
-        return context;
     }
 
 }

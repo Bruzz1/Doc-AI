@@ -1,12 +1,9 @@
 package com.bruce.docai.config;
 
+import com.bruce.docai.service.DocumentService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
-import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -22,8 +19,8 @@ public class DataLoader {
 
     private static final Pattern VECTOR_DIMENSION_PATTERN = Pattern.compile("vector\\((\\d+)\\)");
 
-    private final VectorStore vectorStore;
     private final JdbcClient jdbcClient;
+    private final DocumentService documentService;
 
     @Value("classpath:/RJBRUCE_CV.pdf")
     private Resource pdfResource;
@@ -60,16 +57,11 @@ public class DataLoader {
         log.info("No of Records in the PG Vector Store: {}", count);
         if (count == 0) {
             log.info("Loading personal resume into vector_store");
-            PdfDocumentReaderConfig config = PdfDocumentReaderConfig.builder()
-                    .withPagesPerDocument(1)
-                    .build();
-            PagePdfDocumentReader reader = new PagePdfDocumentReader(pdfResource, config);
-
-
-            var textSplitter = new TokenTextSplitter(
-                    300, 100, 100, 200, true
-            );
-            vectorStore.accept(textSplitter.apply(reader.get()));
+            try {
+                documentService.processResource(pdfResource);
+            } catch (Exception ex) {
+                throw new IllegalStateException("Failed to preload seed document into vector_store.", ex);
+            }
 
             log.info("Application is ready to serve the request");
         } else {

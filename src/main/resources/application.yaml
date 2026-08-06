@@ -11,6 +11,10 @@ spring:
     url: jdbc:postgresql://localhost:5432/ics
     username: postgres
     password: postgres
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
   jpa:
     hibernate:
       ddl-auto: update # for dev
@@ -51,3 +55,5 @@ info:
 app:
   rag:
     reset-on-dimension-drift: true
+    top-k: 4
+    similarity-threshold: 0.6
