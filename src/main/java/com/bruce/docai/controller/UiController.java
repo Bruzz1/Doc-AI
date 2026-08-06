@@ -50,4 +50,5 @@ public class UiController {
     public String adminInvites() {
         return "admin-invites";
     }
+
 }

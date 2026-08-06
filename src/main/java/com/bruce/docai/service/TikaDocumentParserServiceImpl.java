@@ -60,26 +60,26 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
     private int maxNumChunks = 300;
 
     @Override
-    public void processFile(MultipartFile file) throws IOException {
+    public void processFile(MultipartFile file, IngestionMetadataContext context) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File is empty. Allowed types: pdf, doc, docx, txt.");
         }
 
-        ingest(file.getOriginalFilename(), file.getContentType(), file.getSize(), file.getInputStream());
+        ingest(file.getOriginalFilename(), file.getContentType(), file.getSize(), file.getInputStream(), context);
     }
 
     @Override
-    public void processResource(Resource resource) throws IOException {
+    public void processResource(Resource resource, IngestionMetadataContext context) throws IOException {
         if (resource == null || !resource.exists()) {
             throw new IllegalArgumentException("Seed resource does not exist.");
         }
 
         String filename = resource.getFilename();
         long contentLength = safeContentLength(resource);
-        ingest(filename, null, contentLength, resource.getInputStream());
+        ingest(filename, null, contentLength, resource.getInputStream(), context);
     }
 
-    private void ingest(String filename, String declaredContentType, long size, InputStream sourceStream) throws IOException {
+    private void ingest(String filename, String declaredContentType, long size, InputStream sourceStream, IngestionMetadataContext context) throws IOException {
         Metadata metadata = new Metadata();
         if (filename != null) {
             metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, filename);
@@ -118,7 +118,7 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
                 throw new IllegalArgumentException("The uploaded file does not contain readable text. Allowed types: pdf, doc, docx, txt.");
             }
 
-            Map<String, Object> metaMap = buildMetadata(filename, declaredContentType, detectedMediaType, size, bytes.length, extension, metadata);
+            Map<String, Object> metaMap = buildMetadata(filename, declaredContentType, detectedMediaType, size, bytes.length, extension, metadata, context);
             Document document = new Document(normalizedContent, metaMap);
             List<Document> chunks = createTextSplitter().split(document);
             if (chunks.isEmpty()) {
@@ -187,7 +187,8 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
             long declaredSize,
             int actualSize,
             String extension,
-            Metadata metadata
+            Metadata metadata,
+            IngestionMetadataContext context
     ) {
         Map<String, Object> metaMap = new HashMap<>();
         putIfNotNull(metaMap, "filename", filename);
@@ -196,6 +197,12 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
         putIfNotNull(metaMap, "detected-content-type", detectedMediaType != null ? detectedMediaType.toString() : null);
         metaMap.put("size", declaredSize > 0 ? declaredSize : actualSize);
         metaMap.put("normalized", true);
+
+        if (context != null) {
+            putIfNotNull(metaMap, "knowledge-id", context.knowledgeId());
+            putIfNotNull(metaMap, "organization-id", context.organizationId());
+            putIfNotNull(metaMap, "uploaded-by", context.uploadedBy());
+        }
 
         Arrays.stream(metadata.names())
                 .filter(name -> metadata.get(name) != null)

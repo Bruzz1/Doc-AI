@@ -69,6 +69,8 @@ app:
       password: ${APP_SECURITY_BOOTSTRAP_ADMIN_PASSWORD:}
       name: ${APP_SECURITY_BOOTSTRAP_ADMIN_NAME:System Admin}
       organization-id: ${APP_SECURITY_BOOTSTRAP_ORG_ID:default-org}
+  knowledge:
+    upload-dir: ${APP_KNOWLEDGE_UPLOAD_DIR:./uploads/pending}
   rag:
     reset-on-dimension-drift: true
     top-k: 6

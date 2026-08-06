@@ -50,6 +50,7 @@ public class SecurityConfig {
                     boolean isApiRequest = uri.startsWith("/chat")
                             || uri.startsWith("/faqs")
                             || uri.startsWith("/upload")
+                            || uri.startsWith("/api/")
                             || uri.startsWith("/auth/change-password")
                             || uri.startsWith("/auth/me")
                             || uri.startsWith("/auth/invites");
