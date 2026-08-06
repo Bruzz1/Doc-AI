@@ -38,7 +38,7 @@
 
         <!-- Navigation -->
         <nav class="sidebar__nav" aria-label="Main navigation">
-            <a id="chat-nav-item" href="#" class="nav-item nav-item--active">
+            <a href="#" class="nav-item nav-item--active">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
                      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -55,19 +55,32 @@
                 </svg>
                 <span class="nav-label">Documents</span>
             </a>
-            <a id="knowledge-nav-item" href="#" class="nav-item" style="display:none;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 4a2 2 0 0 1 2-2h10l6 6v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                    <path d="M14 2v6h6"/>
-                    <line x1="8" y1="13" x2="16" y2="13"/>
-                    <line x1="8" y1="17" x2="13" y2="17"/>
-                </svg>
-                <span class="nav-label">Knowledge Base</span>
-            </a>
         </nav>
 
         <hr class="sidebar__divider" />
+
+        <!-- Document Upload -->
+        <div class="sidebar__upload">
+            <p class="upload__title">Upload Document</p>
+
+            <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Upload document">
+                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span class="drop-zone__text">
+                    Drag &amp; drop or
+                    <label for="file-input" class="drop-zone__browse">browse</label>
+                </span>
+                <span class="drop-zone__hint">PDF · DOC · DOCX · TXT</span>
+                <input type="file" id="file-input" accept=".pdf,.doc,.docx,.txt" hidden />
+            </div>
+
+            <p id="upload-status" class="upload__status" aria-live="polite"></p>
+            <button id="upload-btn" class="upload__btn" disabled>Upload</button>
+        </div>
 
         <!-- Footer -->
         <div class="sidebar__footer">Powered by Spring AI &amp; pgvector</div>
@@ -92,10 +105,10 @@
                 </svg>
             </button>
 
-            <h1 class="topbar__title" id="topbar-title">AI Chatbot</h1>
+            <h1 class="topbar__title">AI Chatbot</h1>
 
             <!-- RAG ↔ Chat mode toggle -->
-            <div class="mode-toggle" id="mode-toggle-wrap" style="margin-left: auto;">
+            <div class="mode-toggle" style="margin-left: auto;">
                 <span class="mode-toggle__label" id="mode-label">RAG</span>
                 <label class="toggle-switch" title="Switch between RAG and Chat mode">
                     <input type="checkbox" id="mode-toggle" checked />
@@ -145,37 +158,8 @@
             </div>
         </section>
 
-        <section class="knowledge-panel" id="knowledge-panel" style="display:none;" aria-live="polite">
-            <div class="knowledge-card">
-                <h2 class="knowledge-card__title">Add Knowledge</h2>
-                <form id="knowledge-upload-form" class="knowledge-upload-form">
-                    <input id="knowledge-file-input" type="file" accept=".pdf,.doc,.docx,.txt" required />
-                    <button id="knowledge-upload-btn" type="submit">Upload</button>
-                </form>
-                <p id="knowledge-status" class="knowledge-status"></p>
-            </div>
-
-            <div class="knowledge-card">
-                <h2 class="knowledge-card__title">Knowledge Base</h2>
-                <div id="knowledge-list-status" class="knowledge-list-status">Loading knowledge...</div>
-                <div class="knowledge-table-wrap">
-                    <table id="knowledge-table" class="knowledge-table" style="display:none;">
-                        <thead>
-                        <tr>
-                            <th>File</th>
-                            <th>Uploaded By</th>
-                            <th>Created</th>
-                            <th>Action</th>
-                        </tr>
-                        </thead>
-                        <tbody id="knowledge-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
         <!-- Chat Input -->
-        <footer class="chat-footer" id="chat-footer">
+        <footer class="chat-footer">
             <div class="chat-input">
                 <input id="user-input" type="text"
                        placeholder="Ask a question…"
@@ -210,33 +194,19 @@ const App = {
     mobileMenuBtn: document.getElementById('mobile-menu-btn'),
     brandInfo:     document.getElementById('brand-info'),
     chatMessages:  document.getElementById('chat-messages'),
-    chatFooter:    document.getElementById('chat-footer'),
-    topbarTitle:   document.getElementById('topbar-title'),
-    modeToggleWrap: document.getElementById('mode-toggle-wrap'),
     userInput:     document.getElementById('user-input'),
     sendBtn:       document.getElementById('send-btn'),
     modeToggle:    document.getElementById('mode-toggle'),
     modeLabel:     document.getElementById('mode-label'),
+    dropZone:      document.getElementById('drop-zone'),
+    fileInput:     document.getElementById('file-input'),
+    uploadBtn:     document.getElementById('upload-btn'),
+    uploadStatus:  document.getElementById('upload-status'),
     logoutBtn:     document.getElementById('logout-btn'),
     userAvatarBtn: document.getElementById('user-avatar-btn'),
     userDropdown:  document.getElementById('user-dropdown'),
     userDropdownEmail: document.getElementById('user-dropdown-email'),
     invitesMenuItem: document.getElementById('invites-menu-item'),
-    chatNavItem: document.getElementById('chat-nav-item'),
-    knowledgeNavItem: document.getElementById('knowledge-nav-item'),
-    knowledgePanel: document.getElementById('knowledge-panel'),
-    knowledgeUploadForm: document.getElementById('knowledge-upload-form'),
-    knowledgeFileInput: document.getElementById('knowledge-file-input'),
-    knowledgeUploadBtn: document.getElementById('knowledge-upload-btn'),
-    knowledgeStatus: document.getElementById('knowledge-status'),
-    knowledgeListStatus: document.getElementById('knowledge-list-status'),
-    knowledgeTable: document.getElementById('knowledge-table'),
-    knowledgeTableBody: document.getElementById('knowledge-table-body'),
-};
-
-const ViewState = {
-    isAdmin: false,
-    currentView: 'chat',
 };
 
 const Auth = {
@@ -285,12 +255,8 @@ const Auth = {
         // Populate dropdown header and show admin-only items
         App.userDropdownEmail.textContent = me.email || me.name || '';
         if (me.role === 'ADMIN') {
-            ViewState.isAdmin = true;
             App.invitesMenuItem.style.display = 'flex';
-            App.knowledgeNavItem.style.display = 'flex';
         }
-
-        return me;
     },
 
     async logout() {
@@ -338,156 +304,6 @@ marked.setOptions({ breaks: true, gfm: true });
 function renderMarkdown(text) {
     return marked.parse(text);
 }
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-const ViewManager = {
-    set(view) {
-        const isKnowledge = view === 'knowledge' && ViewState.isAdmin;
-        ViewState.currentView = isKnowledge ? 'knowledge' : 'chat';
-
-        App.chatMessages.style.display = isKnowledge ? 'none' : 'flex';
-        App.chatFooter.style.display = isKnowledge ? 'none' : '';
-        App.knowledgePanel.style.display = isKnowledge ? 'block' : 'none';
-        App.modeToggleWrap.style.display = isKnowledge ? 'none' : 'flex';
-        App.topbarTitle.textContent = isKnowledge ? 'Knowledge Base' : 'AI Chatbot';
-
-        App.chatNavItem.classList.toggle('nav-item--active', !isKnowledge);
-        App.knowledgeNavItem.classList.toggle('nav-item--active', isKnowledge);
-
-        if (!isKnowledge) {
-            App.userInput.focus();
-        }
-    },
-
-    init() {
-        App.chatNavItem.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.set('chat');
-        });
-
-        App.knowledgeNavItem.addEventListener('click', async (e) => {
-            e.preventDefault();
-            if (!ViewState.isAdmin) return;
-            this.set('knowledge');
-            await Knowledge.load();
-        });
-    },
-};
-
-const Knowledge = {
-    setStatus(message, state = '') {
-        App.knowledgeStatus.textContent = message;
-        App.knowledgeStatus.className = `knowledge-status${state ? ' knowledge-status--' + state : ''}`;
-    },
-
-    async load() {
-        App.knowledgeListStatus.style.display = 'block';
-        App.knowledgeListStatus.textContent = 'Loading knowledge...';
-        App.knowledgeTable.style.display = 'none';
-
-        try {
-            const response = await Auth.apiFetch('/api/admin/knowledge');
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                throw new Error(data.error || 'Failed to load knowledge.');
-            }
-
-            const knowledgeItems = await response.json();
-            if (!Array.isArray(knowledgeItems) || knowledgeItems.length === 0) {
-                App.knowledgeTableBody.innerHTML = '';
-                App.knowledgeListStatus.textContent = 'No knowledge uploaded yet.';
-                return;
-            }
-
-            App.knowledgeTableBody.innerHTML = knowledgeItems.map((item) => `
-                <tr>
-                    <td>${escapeHtml(item.filename || '-')}</td>
-                    <td>${escapeHtml(item.uploadedBy || '-')}</td>
-                    <td>${escapeHtml(formatDate(item.createdAt))}</td>
-                    <td>
-                        <button type="button" class="knowledge-remove-btn" data-id="${escapeHtml(item.knowledgeId)}">Remove</button>
-                    </td>
-                </tr>
-            `).join('');
-
-            App.knowledgeListStatus.style.display = 'none';
-            App.knowledgeTable.style.display = 'table';
-        } catch (error) {
-            App.knowledgeListStatus.textContent = error.message || 'Failed to load knowledge.';
-            App.knowledgeListStatus.style.display = 'block';
-        }
-    },
-
-    async upload(event) {
-        event.preventDefault();
-        if (!App.knowledgeFileInput.files[0]) {
-            this.setStatus('Please select a file to upload.', 'error');
-            return;
-        }
-
-        App.knowledgeUploadBtn.disabled = true;
-        this.setStatus('Uploading...', 'loading');
-
-        const body = new FormData();
-        body.append('file', App.knowledgeFileInput.files[0]);
-
-        try {
-            const response = await Auth.apiFetch('/api/admin/knowledge', { method: 'POST', body });
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                throw new Error(data.error || 'Upload failed.');
-            }
-
-            App.knowledgeFileInput.value = '';
-            this.setStatus('Knowledge added successfully.', 'success');
-            await this.load();
-        } catch (error) {
-            this.setStatus(error.message || 'Upload failed.', 'error');
-        } finally {
-            App.knowledgeUploadBtn.disabled = false;
-        }
-    },
-
-    async remove(knowledgeId) {
-        if (!knowledgeId) return;
-        if (!confirm('Remove this knowledge entry?')) return;
-
-        try {
-            const response = await Auth.apiFetch(`/api/admin/knowledge/${encodeURIComponent(knowledgeId)}`, { method: 'DELETE' });
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                throw new Error(data.error || 'Delete failed.');
-            }
-            this.setStatus('Knowledge removed.', 'success');
-            await this.load();
-        } catch (error) {
-            this.setStatus(error.message || 'Delete failed.', 'error');
-        }
-    },
-
-    init() {
-        App.knowledgeUploadForm.addEventListener('submit', (event) => this.upload(event));
-        App.knowledgeTableBody.addEventListener('click', (event) => {
-            const button = event.target.closest('.knowledge-remove-btn');
-            if (!button) return;
-            this.remove(button.getAttribute('data-id'));
-        });
-    },
-};
 
 /* ─── Chat ───────────────────────────────────────────── */
 const Chat = {
@@ -586,18 +402,85 @@ const Chat = {
 };
 
 
+/* ─── Upload ─────────────────────────────────────────── */
+const Upload = {
+    selectedFile: null,
+
+    setStatus(message, state = '') {
+        App.uploadStatus.textContent = message;
+        App.uploadStatus.className   = `upload__status${state ? ' upload__status--' + state : ''}`;
+    },
+
+    selectFile(file) {
+        if (!file) return;
+        this.selectedFile      = file;
+        App.uploadBtn.disabled = false;
+        this.setStatus(`📄 ${file.name}`, 'ready');
+    },
+
+    reset() {
+        this.selectedFile      = null;
+        App.fileInput.value    = '';
+        App.uploadBtn.disabled = true;
+    },
+
+    async upload() {
+        if (!this.selectedFile) return;
+        App.uploadBtn.disabled = true;
+        this.setStatus('Uploading…', 'loading');
+
+        const body = new FormData();
+        body.append('file', this.selectedFile);
+
+        try {
+            const res  = await Auth.apiFetch('/upload', { method: 'POST', body });
+            const text = await res.text();
+            if (res.ok) {
+                this.setStatus('✅ ' + text, 'success');
+                this.reset();
+            } else {
+                this.setStatus('❌ ' + text, 'error');
+                App.uploadBtn.disabled = false;
+            }
+        } catch {
+            this.setStatus('❌ Upload failed. Check your connection.', 'error');
+            App.uploadBtn.disabled = false;
+        }
+    },
+
+    init() {
+        App.fileInput.addEventListener('change', () => {
+            if (App.fileInput.files[0]) this.selectFile(App.fileInput.files[0]);
+        });
+
+        App.dropZone.addEventListener('click', e => {
+            if (e.target.tagName !== 'LABEL') App.fileInput.click();
+        });
+
+        App.dropZone.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') App.fileInput.click();
+        });
+
+        App.dropZone.addEventListener('dragover',  e  => { e.preventDefault(); App.dropZone.classList.add('drop-zone--over'); });
+        App.dropZone.addEventListener('dragleave', () => App.dropZone.classList.remove('drop-zone--over'));
+        App.dropZone.addEventListener('dragend',   () => App.dropZone.classList.remove('drop-zone--over'));
+        App.dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            App.dropZone.classList.remove('drop-zone--over');
+            if (e.dataTransfer.files[0]) this.selectFile(e.dataTransfer.files[0]);
+        });
+
+        App.uploadBtn.addEventListener('click', () => this.upload());
+    },
+};
+
+
 /* ─── Boot ───────────────────────────────────────────── */
 (async () => {
-    const me = await Auth.init();
-    if (!me) return;
-
+    await Auth.init();
     Sidebar.init();
-    ViewManager.init();
     Chat.init();
-    if (ViewState.isAdmin) {
-        Knowledge.init();
-    }
-    ViewManager.set('chat');
+    Upload.init();
     App.logoutBtn.addEventListener('click', () => Auth.logout());
 
     // User avatar dropdown toggle

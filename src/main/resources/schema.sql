@@ -10,4 +10,3 @@ CREATE TABLE IF NOT EXISTS vector_store (
 );
 
 CREATE INDEX ON vector_store USING HNSW (embedding vector_cosine_ops);
-
