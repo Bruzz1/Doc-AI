@@ -1,177 +1,367 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Enterprise AI Assistant</title>
-    <!-- Google Fonts for a modern, clean look -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <!-- For your local project, uncomment the line below and remove the <style> block -->
-     <link rel="stylesheet" href="/style.css" />
-
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
 
-<div id="main-wrapper">
-    <!-- Left Navigation / Tenant Sidebar -->
-    <aside class="sidebar">
-        <div class="tenant-section">
-            <!-- Business/Tenant Logo Placeholder -->
-            <div class="tenant-logo">
-                <!-- Fallback Text Logo or <img> tag can go here -->
-                <span>B</span>
-            </div>
-            <div class="tenant-info">
-                <div class="tenant-name" th:text="${tenantName != null ? tenantName : 'Boostware'}">Company Name</div>
-                <div class="tenant-tag">Enterprise Workspace</div>
+<div id="app">
+
+    <!-- ═══════════════════════════════════════
+         SIDEBAR
+    ═══════════════════════════════════════ -->
+    <aside class="sidebar" id="sidebar">
+
+        <!-- Brand / Tenant -->
+        <div class="sidebar__brand">
+            <div class="brand-logo"><span>B</span></div>
+            <div class="brand-info" id="brand-info">
+                <div class="brand-name" th:text="${tenantName != null ? tenantName : 'Boostware'}">Boostware</div>
+                <div class="brand-tag">Enterprise Workspace</div>
             </div>
         </div>
 
-        <div class="sidebar-footer">
-            Powered by Spring AI & pgvector
+        <!-- Collapse Toggle -->
+        <button class="sidebar__toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+        </button>
+
+        <!-- Navigation -->
+        <nav class="sidebar__nav" aria-label="Main navigation">
+            <a href="#" class="nav-item nav-item--active">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span class="nav-label">Chat</span>
+            </a>
+            <a href="#" class="nav-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <span class="nav-label">Documents</span>
+            </a>
+        </nav>
+
+        <hr class="sidebar__divider" />
+
+        <!-- Document Upload -->
+        <div class="sidebar__upload">
+            <p class="upload__title">Upload Document</p>
+
+            <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Upload document">
+                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span class="drop-zone__text">
+                    Drag &amp; drop or
+                    <label for="file-input" class="drop-zone__browse">browse</label>
+                </span>
+                <span class="drop-zone__hint">PDF · DOC · DOCX · TXT</span>
+                <input type="file" id="file-input" accept=".pdf,.doc,.docx,.txt" hidden />
+            </div>
+
+            <p id="upload-status" class="upload__status" aria-live="polite"></p>
+            <button id="upload-btn" class="upload__btn" disabled>Upload</button>
         </div>
+
+        <!-- Footer -->
+        <div class="sidebar__footer">Powered by Spring AI &amp; pgvector</div>
+
     </aside>
 
-    <!-- Main Chat Content Space -->
-    <main class="chat-workspace">
-        <header class="workspace-header">
-            <div class="header-title">
-                <h1>AI Chatbot</h1>
-            </div>
 
-            <!-- Context toggle moved to header for a cleaner top bar placement -->
-            <div id="mode-toggle-container">
-                <span class="toggle-label" id="mode-label">Mode: RAG</span>
-                <label class="switch">
-                    <input type="checkbox" id="mode-toggle" checked>
-                    <span class="slider"></span>
+    <!-- ═══════════════════════════════════════
+         MAIN CONTENT
+    ═══════════════════════════════════════ -->
+    <main class="main" id="main">
+
+        <!-- Top Bar -->
+        <header class="topbar">
+            <!-- Hamburger: shown only on mobile / when sidebar is collapsed -->
+            <button class="topbar__menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="6"  x2="21" y2="6"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
+
+            <h1 class="topbar__title">AI Chatbot</h1>
+
+            <!-- RAG ↔ Chat mode toggle -->
+            <div class="mode-toggle">
+                <span class="mode-toggle__label" id="mode-label">RAG</span>
+                <label class="toggle-switch" title="Switch between RAG and Chat mode">
+                    <input type="checkbox" id="mode-toggle" checked />
+                    <span class="toggle-switch__track"></span>
                 </label>
             </div>
         </header>
 
-        <!-- Messages Area -->
-        <div id="chat-container">
-            <!-- System Welcome Message -->
-            <div class="message ai-message">
-                Hello! How can I help you with our company database and tools today?
+        <!-- Chat Messages -->
+        <section class="chat-messages" id="chat-messages" aria-label="Conversation" aria-live="polite">
+            <div class="message message--ai">
+                Hello! How can I help you with our company knowledge base today?
             </div>
-        </div>
+        </section>
 
-        <!-- Chat Input Deck -->
-        <footer id="input-area">
-            <div class="input-wrapper">
-                <div id="input-row">
-                    <input id="user-input" type="text" placeholder="Ask a business query..." autocomplete="off" />
-                    <button id="send-btn">Send</button>
-                </div>
+        <!-- Chat Input -->
+        <footer class="chat-footer">
+            <div class="chat-input">
+                <input id="user-input" type="text"
+                       placeholder="Ask a question…"
+                       autocomplete="off"
+                       aria-label="Your message" />
+                <button id="send-btn" aria-label="Send message">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    <span>Send</span>
+                </button>
             </div>
         </footer>
+
     </main>
-</div>
 
+</div><!-- /#app -->
+
+
+<!-- ═══════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════ -->
 <script>
-    const chatContainer = document.getElementById('chat-container');
-    const input = document.getElementById('user-input');
-    const sendBtn = document.getElementById('send-btn');
-    const modeToggle = document.getElementById('mode-toggle');
-    const modeLabel = document.getElementById('mode-label');
+'use strict';
 
-    function appendMessage(text, className) {
-      const msgDiv = document.createElement('div');
-      msgDiv.className = 'message ' + className;
-      msgDiv.textContent = text;
-      chatContainer.appendChild(msgDiv);
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-      return msgDiv;
-    }
+/* ─── DOM References ─────────────────────────────────── */
+const App = {
+    sidebar:       document.getElementById('sidebar'),
+    sidebarToggle: document.getElementById('sidebar-toggle'),
+    mobileMenuBtn: document.getElementById('mobile-menu-btn'),
+    brandInfo:     document.getElementById('brand-info'),
+    chatMessages:  document.getElementById('chat-messages'),
+    userInput:     document.getElementById('user-input'),
+    sendBtn:       document.getElementById('send-btn'),
+    modeToggle:    document.getElementById('mode-toggle'),
+    modeLabel:     document.getElementById('mode-label'),
+    dropZone:      document.getElementById('drop-zone'),
+    fileInput:     document.getElementById('file-input'),
+    uploadBtn:     document.getElementById('upload-btn'),
+    uploadStatus:  document.getElementById('upload-status'),
+};
 
-    function createTypingBubble() {
-      const typingDiv = document.createElement('div');
-      typingDiv.className = 'message ai-message typing';
 
-      for (let i = 0; i < 3; i++) {
-        const dot = document.createElement('span');
-        dot.className = 'typing-dot';
-        typingDiv.appendChild(dot);
-      }
-      chatContainer.appendChild(typingDiv);
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-      return typingDiv;
-    }
+/* ─── Sidebar ────────────────────────────────────────── */
+const Sidebar = {
+    STORAGE_KEY: 'sidebar-collapsed',
 
-    function getSelectedEndpoint() {
-      return modeToggle.checked ? '/faqs' : '/chat';
-    }
-
-    function updateModeLabel() {
-      modeLabel.textContent = 'Mode: ' + (modeToggle.checked ? 'RAG' : 'Chat');
-    }
-
-    function typeEffect(element, text, speed = 20) {
-      let index = 0;
-      element.textContent = '';
-      const interval = setInterval(() => {
-        if (index < text.length) {
-          element.textContent += text.charAt(index);
-          chatContainer.scrollTop = chatContainer.scrollHeight;
-          index++;
-        } else {
-          clearInterval(interval);
+    init() {
+        // Restore persisted state on load (no animation flash)
+        if (localStorage.getItem(this.STORAGE_KEY) === 'true') {
+            this.setCollapsed(true, false);
         }
-      }, speed);
-    }
+        App.sidebarToggle.addEventListener('click', () => this.toggle());
+        App.mobileMenuBtn.addEventListener('click', () => this.setCollapsed(false));
+    },
 
-    async function sendMessage() {
-      const userQuestion = input.value.trim();
-      if (!userQuestion) return;
+    toggle() {
+        this.setCollapsed(!App.sidebar.classList.contains('sidebar--collapsed'));
+    },
 
-      appendMessage(userQuestion, 'user-message');
+    setCollapsed(collapsed, animate = true) {
+        if (!animate) App.sidebar.style.transition = 'none';
+        App.sidebar.classList.toggle('sidebar--collapsed', collapsed);
+        localStorage.setItem(this.STORAGE_KEY, collapsed);
+        if (!animate) requestAnimationFrame(() => (App.sidebar.style.transition = ''));
+    },
+};
 
-      input.value = '';
-      sendBtn.disabled = true;
 
-      const endpoint = getSelectedEndpoint();
-      const paramName = endpoint === '/chat' ? 'message' : 'question';
-      const url = `${endpoint}?${paramName}=${encodeURIComponent(userQuestion)}`;
+/* ─── Chat ───────────────────────────────────────────── */
+const Chat = {
+    appendMessage(text, type) {
+        const div = document.createElement('div');
+        div.className = `message message--${type}`;
+        div.textContent = text;
+        App.chatMessages.appendChild(div);
+        this.scrollToBottom();
+        return div;
+    },
 
-      const aiMsgDiv = createTypingBubble();
-
-      try {
-        const response = await fetch(url);
-        const answer = await response.text();
-
-        // Stop typing animation and show answer typed out
-        aiMsgDiv.textContent = '';
-        aiMsgDiv.classList.remove('typing');
-
-        // Fast display for long answers
-        if (answer.length > 300) {
-            aiMsgDiv.textContent = answer;
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        } else {
-            typeEffect(aiMsgDiv, answer, 5);
+    createTypingBubble() {
+        const div = document.createElement('div');
+        div.className = 'message message--ai message--typing';
+        for (let i = 0; i < 3; i++) {
+            const dot = document.createElement('span');
+            dot.className = 'typing-dot';
+            div.appendChild(dot);
         }
-      } catch (e) {
-        aiMsgDiv.textContent = 'Error: Could not get response from server.';
-        aiMsgDiv.classList.remove('typing');
-      } finally {
-        sendBtn.disabled = false;
-        input.focus();
-      }
-    }
+        App.chatMessages.appendChild(div);
+        this.scrollToBottom();
+        return div;
+    },
 
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') sendMessage();
-    });
+    typeEffect(element, text, speed = 8) {
+        let i = 0;
+        element.textContent = '';
+        const tick = setInterval(() => {
+            if (i < text.length) {
+                element.textContent += text[i++];
+                this.scrollToBottom();
+            } else {
+                clearInterval(tick);
+            }
+        }, speed);
+    },
 
-    modeToggle.addEventListener('change', updateModeLabel);
+    scrollToBottom() {
+        App.chatMessages.scrollTop = App.chatMessages.scrollHeight;
+    },
 
-    updateModeLabel();
-    input.focus();
+    getEndpoint() {
+        return App.modeToggle.checked ? '/faqs' : '/chat';
+    },
+
+    updateModeLabel() {
+        App.modeLabel.textContent = App.modeToggle.checked ? 'RAG' : 'Chat';
+    },
+
+    async send() {
+        const question = App.userInput.value.trim();
+        if (!question) return;
+
+        this.appendMessage(question, 'user');
+        App.userInput.value = '';
+        App.sendBtn.disabled = true;
+
+        const endpoint  = this.getEndpoint();
+        const paramName = endpoint === '/chat' ? 'message' : 'question';
+        const url       = `${endpoint}?${paramName}=${encodeURIComponent(question)}`;
+        const bubble    = this.createTypingBubble();
+
+        try {
+            const res    = await fetch(url);
+            const answer = await res.text();
+            bubble.textContent = '';
+            bubble.classList.remove('message--typing');
+            answer.length > 300
+                ? (bubble.textContent = answer, this.scrollToBottom())
+                : this.typeEffect(bubble, answer);
+        } catch {
+            bubble.textContent = 'Error: Could not reach the server.';
+            bubble.classList.remove('message--typing');
+        } finally {
+            App.sendBtn.disabled = false;
+            App.userInput.focus();
+        }
+    },
+
+    init() {
+        App.sendBtn.addEventListener('click',   () => this.send());
+        App.userInput.addEventListener('keydown', e => { if (e.key === 'Enter') this.send(); });
+        App.modeToggle.addEventListener('change', () => this.updateModeLabel());
+        this.updateModeLabel();
+        App.userInput.focus();
+    },
+};
+
+
+/* ─── Upload ─────────────────────────────────────────── */
+const Upload = {
+    selectedFile: null,
+
+    setStatus(message, state = '') {
+        App.uploadStatus.textContent = message;
+        App.uploadStatus.className   = `upload__status${state ? ' upload__status--' + state : ''}`;
+    },
+
+    selectFile(file) {
+        if (!file) return;
+        this.selectedFile      = file;
+        App.uploadBtn.disabled = false;
+        this.setStatus(`📄 ${file.name}`, 'ready');
+    },
+
+    reset() {
+        this.selectedFile      = null;
+        App.fileInput.value    = '';
+        App.uploadBtn.disabled = true;
+    },
+
+    async upload() {
+        if (!this.selectedFile) return;
+        App.uploadBtn.disabled = true;
+        this.setStatus('Uploading…', 'loading');
+
+        const body = new FormData();
+        body.append('file', this.selectedFile);
+
+        try {
+            const res  = await fetch('/upload', { method: 'POST', body });
+            const text = await res.text();
+            if (res.ok) {
+                this.setStatus('✅ ' + text, 'success');
+                this.reset();
+            } else {
+                this.setStatus('❌ ' + text, 'error');
+                App.uploadBtn.disabled = false;
+            }
+        } catch {
+            this.setStatus('❌ Upload failed. Check your connection.', 'error');
+            App.uploadBtn.disabled = false;
+        }
+    },
+
+    init() {
+        App.fileInput.addEventListener('change', () => {
+            if (App.fileInput.files[0]) this.selectFile(App.fileInput.files[0]);
+        });
+
+        App.dropZone.addEventListener('click', e => {
+            if (e.target.tagName !== 'LABEL') App.fileInput.click();
+        });
+
+        App.dropZone.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') App.fileInput.click();
+        });
+
+        App.dropZone.addEventListener('dragover',  e  => { e.preventDefault(); App.dropZone.classList.add('drop-zone--over'); });
+        App.dropZone.addEventListener('dragleave', () => App.dropZone.classList.remove('drop-zone--over'));
+        App.dropZone.addEventListener('dragend',   () => App.dropZone.classList.remove('drop-zone--over'));
+        App.dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            App.dropZone.classList.remove('drop-zone--over');
+            if (e.dataTransfer.files[0]) this.selectFile(e.dataTransfer.files[0]);
+        });
+
+        App.uploadBtn.addEventListener('click', () => this.upload());
+    },
+};
+
+
+/* ─── Boot ───────────────────────────────────────────── */
+Sidebar.init();
+Chat.init();
+Upload.init();
 </script>
 
 </body>
