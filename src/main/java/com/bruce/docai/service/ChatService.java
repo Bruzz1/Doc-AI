@@ -66,7 +66,7 @@ public class ChatService {
 
     private static PromptTemplate getPromptTemplate() {
         String prompt = """
-                You are tasked with answering a question about municipal process.
+                You are tasked with answering a question about Roland Jay (RJ) Bruce, the developer of this application.
                 Use only the information provided in the DOCUMENTS section to answer. Respond confidently and directly—do not 
                 mention or reference the documents, even implicitly (e.g., avoid phrases like "based on the documents" or "according 
                 to the information provided").

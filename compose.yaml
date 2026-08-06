@@ -13,3 +13,4 @@ services:
       - "org.springframework.boot.service-connection=postgres"
     ports:
       - '5432'
+

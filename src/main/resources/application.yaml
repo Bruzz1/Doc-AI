@@ -1,5 +1,9 @@
-spring.application.name: docai
 spring:
+  application:
+    name: docai
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   sql:
     init:
       mode: always
@@ -7,26 +11,43 @@ spring:
     url: jdbc:postgresql://localhost:5432/ics
     username: postgres
     password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update # for dev
+    show-sql: true
   ai:
-    chat:
-      provider: ollama
     ollama:
       base-url: http://localhost:11434/
-      model: llama3
-      chat.options.model: llama3.2
-#      embedding.options.model: llama3
-    #      init:
-#        pull-model-strategy: always
-#    chat:
-#      provider: openai
-#    openai:
-#      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: qwen2.5:3b
+      embedding:
+        options:
+          model: nomic-embed-text
     vectorstore:
       pgvector:
-      index-type: HNSW
-      distance-type: COSINE_DISTANCE
-      dimensions: 1536
-      max-document-batch-size: 10000 # Optional: Maximum number of documents per batch
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 768
+        max-document-batch-size: 10000
 
+server:
+  port: 8081
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+  info:
+    env:
+      enabled: true
 
+info:
+  app:
+    name: My RAG Application
+    version: 1.0.0
+
+app:
+  rag:
+    reset-on-dimension-drift: true

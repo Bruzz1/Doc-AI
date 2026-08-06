@@ -146,7 +146,14 @@
         // Stop typing animation and show answer typed out
         aiMsgDiv.textContent = '';
         aiMsgDiv.classList.remove('typing');
-        typeEffect(aiMsgDiv, answer);
+
+        // Fast display for long answers
+        if (answer.length > 300) {
+            aiMsgDiv.textContent = answer;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        } else {
+            typeEffect(aiMsgDiv, answer, 5);
+        }
       } catch (e) {
         aiMsgDiv.textContent = 'Error: Could not get response from server.';
         aiMsgDiv.classList.remove('typing');
