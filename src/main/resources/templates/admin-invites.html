@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manage Invites - Admin</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Inter, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f3f5fb;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 0;
+            margin-bottom: 24px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+        }
+
+        .back-link {
+            color: #1d4ed8;
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+            display: inline-block;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        @media (max-width: 1024px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .card h2 {
+            margin: 0 0 20px;
+            font-size: 1.25rem;
+            color: #1e293b;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 1rem;
+            margin-bottom: 14px;
+            background: #fff;
+            color: #1e293b;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+        }
+
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            width: 100%;
+            color: #fff;
+            background: #1d4ed8;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #1e40af;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-copy {
+            background: #1d4ed8;
+            color: #fff;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        .btn-copy:hover {
+            background: #1e40af;
+        }
+
+        .btn-cancel {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        .btn-cancel:hover {
+            background: #fecaca;
+        }
+
+        #status {
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        #status.show {
+            display: block;
+        }
+
+        #status.error {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        #status.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .invites-list {
+            margin-top: 24px;
+        }
+
+        .invite-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .invite-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .invite-email {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .invite-meta {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .invite-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-used {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-expired {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .invite-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 32px 16px;
+            color: #64748b;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #1d4ed8;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 32px 16px;
+            color: #64748b;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="container">
+        <a href="/app" class="back-link">← Back to App</a>
+        <h1>👥 Manage Invites</h1>
+        <p style="margin: 8px 0 0; color: #64748b;">Create user invites and manage team onboarding</p>
+    </div>
+</header>
+
+<div class="container">
+    <div class="content">
+        <!-- Create Invite Card -->
+        <div class="card">
+            <h2>Create New Invite</h2>
+
+            <div id="create-status" aria-live="polite"></div>
+
+            <form id="create-invite-form">
+                <label for="email">Email Address</label>
+                <input id="email" type="email" placeholder="user@example.com" required />
+
+                <label for="role">Role</label>
+                <select id="role">
+                    <option value="USER">User</option>
+                    <option value="ADMIN">Admin</option>
+                </select>
+
+                <label for="org-id">Organization ID (optional)</label>
+                <input id="org-id" type="text" placeholder="Leave blank to use your org" />
+
+                <button id="create-btn" class="btn-primary" type="submit">Create & Copy Invite Link</button>
+            </form>
+        </div>
+
+        <!-- Recently Created -->
+        <div class="card">
+            <h2>Last Created Invite</h2>
+            <div id="last-invite" class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <p>No invites created yet</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Invites List -->
+    <div class="card">
+        <h2>Pending Invites</h2>
+        <div id="invites-container" class="loading">
+            <div class="spinner"></div>
+            <p>Loading invites...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+const form = document.getElementById('create-invite-form');
+const createBtn = document.getElementById('create-btn');
+const createStatusEl = document.getElementById('create-status');
+const invitesContainer = document.getElementById('invites-container');
+const lastInviteEl = document.getElementById('last-invite');
+
+// Load existing invites on page load
+loadInvites();
+
+async function createInvite(event) {
+    event.preventDefault();
+
+    createStatusEl.textContent = '';
+    createStatusEl.className = '';
+    createBtn.disabled = true;
+
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const role = document.getElementById('role').value;
+    const organizationId = document.getElementById('org-id').value.trim() || null;
+
+    try {
+        const response = await fetch('/auth/invites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ email, role, organizationId }),
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            showStatus('create-status', data.error || 'Failed to create invite', 'error');
+            createBtn.disabled = false;
+            return;
+        }
+
+        const data = await response.json();
+        const inviteLink = `${window.location.origin}/accept-invite?token=${data.inviteToken}`;
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(inviteLink).then(() => {
+            showStatus('create-status', `✓ Invite link copied to clipboard!`, 'success');
+        }).catch(() => {
+            showStatus('create-status', `Invite created! Link: ${inviteLink}`, 'success');
+        });
+
+        // Display last created invite
+        displayLastInvite(data, inviteLink);
+
+        // Reset form and reload list
+        form.reset();
+        await loadInvites();
+    } catch (e) {
+        showStatus('create-status', 'Failed to reach server', 'error');
+    } finally {
+        createBtn.disabled = false;
+    }
+}
+
+function displayLastInvite(invite, inviteLink) {
+    lastInviteEl.innerHTML = `
+        <div style="text-align: left;">
+            <div class="invite-email">${invite.email}</div>
+            <div class="invite-meta">Role: <strong>${invite.role}</strong></div>
+            <div class="invite-meta">Organization: <strong>${invite.organizationId}</strong></div>
+            <div style="margin-top: 12px;">
+                <textarea readonly style="width: 100%; height: 60px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-size: 0.85rem; font-family: monospace; resize: none;">${inviteLink}</textarea>
+            </div>
+        </div>
+    `;
+}
+
+async function loadInvites() {
+    try {
+        const response = await fetch('/auth/invites', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+            invitesContainer.innerHTML = '<p style="color: #b91c1c;">Failed to load invites</p>';
+            return;
+        }
+
+        const invites = await response.json();
+
+        if (!invites || invites.length === 0) {
+            invitesContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">✉️</div>
+                    <p>No pending invites yet</p>
+                </div>
+            `;
+            return;
+        }
+
+        const html = invites.map(inv => {
+            const expiresAt = new Date(inv.expiresAt);
+            const isExpired = expiresAt < new Date();
+            const isUsed = inv.usedAt !== null;
+
+            let statusClass = 'status-pending';
+            let statusText = '📋 Pending';
+            if (isUsed) {
+                statusClass = 'status-used';
+                statusText = '✓ Used';
+            } else if (isExpired) {
+                statusClass = 'status-expired';
+                statusText = '⏰ Expired';
+            }
+
+            return `
+                <div class="invite-item">
+                    <div class="invite-info">
+                        <div class="invite-email">${inv.email}</div>
+                        <div class="invite-meta">
+                            Role: <strong>${inv.role}</strong> | Org: <strong>${inv.organizationId}</strong> | Created by: <strong>${inv.createdBy}</strong>
+                        </div>
+                        <div class="invite-meta">
+                            Created: <strong>${formatDate(inv.createdAt)}</strong>
+                            ${!isUsed ? `| Expires: <strong>${formatDate(expiresAt)}</strong>` : `| Used: <strong>${formatDate(inv.usedAt)}</strong>`}
+                        </div>
+                        <div>
+                            <span class="invite-status ${statusClass}">${statusText}</span>
+                        </div>
+                    </div>
+                    <div class="invite-actions">
+                        ${!isUsed ? `<button class="btn-copy" onclick="regenerateInvite('${inv.id}', '${inv.email}')">🔄 Regenerate Link</button>` : ''}
+                        ${!isUsed ? `<button class="btn-cancel" onclick="cancelInvite('${inv.id}', '${inv.email}')">✕ Cancel</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        invitesContainer.innerHTML = html;
+    } catch (e) {
+        invitesContainer.innerHTML = '<p style="color: #b91c1c;">Error loading invites</p>';
+    }
+}
+
+function copyInviteLink(link) {
+    navigator.clipboard.writeText(link).then(() => {
+        alert('Invite link copied!');
+    }).catch(() => {
+        alert('Failed to copy. Link: ' + link);
+    });
+}
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function showStatus(elementId, message, type) {
+    const el = document.getElementById(elementId);
+    el.textContent = message;
+    el.className = `show ${type}`;
+}
+
+async function cancelInvite(id, email) {
+    if (!confirm(`Cancel the invite for ${email}? This cannot be undone.`)) return;
+
+    try {
+        const response = await fetch(`/auth/invites/${id}`, {
+            method: 'DELETE',
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            alert(data.error || 'Failed to cancel invite');
+            return;
+        }
+
+        await loadInvites();
+    } catch (e) {
+        alert('Failed to reach server');
+    }
+}
+
+async function regenerateInvite(id, email) {
+    if (!confirm(`Regenerate invite link for ${email}? The old link will stop working.`)) return;
+
+    try {
+        const response = await fetch(`/auth/invites/${id}/regenerate`, {
+            method: 'POST',
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            alert(data.error || 'Failed to regenerate invite');
+            return;
+        }
+
+        const data = await response.json();
+        const inviteLink = `${window.location.origin}/accept-invite?token=${data.inviteToken}`;
+
+        navigator.clipboard.writeText(inviteLink).then(() => {
+            alert(`✓ New invite link for ${email} copied to clipboard!`);
+        }).catch(() => {
+            prompt(`New invite link for ${email} (copy manually):`, inviteLink);
+        });
+
+        displayLastInvite(data, inviteLink);
+        await loadInvites();
+    } catch (e) {
+        alert('Failed to reach server');
+    }
+}
+
+form.addEventListener('submit', createInvite);
+</script>
+</body>
+</html>
+
+

@@ -628,6 +628,101 @@ hr { border: none; border-top: 1px solid var(--color-border); }
 }
 
 
+/* ── User Avatar Menu ── */
+.user-menu {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    border: 1.5px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-muted);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.user-avatar:hover {
+    background: #eff6ff;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.user-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    min-width: 200px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+    overflow: hidden;
+    z-index: 200;
+}
+
+.user-dropdown--open {
+    display: block;
+    animation: dropdown-in 0.15s ease-out;
+}
+
+@keyframes dropdown-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.user-dropdown__header {
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-dropdown__divider {
+    margin: 0;
+    border-color: var(--color-border);
+}
+
+.user-dropdown__item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.12s;
+    white-space: nowrap;
+}
+
+.user-dropdown__item:hover {
+    background: var(--color-bg);
+}
+
+.user-dropdown__item--danger {
+    color: #dc2626;
+}
+
+.user-dropdown__item--danger:hover {
+    background: #fff5f5;
+}
+
+
 /* ═══════════════════════════════════════════════════════════════
    RESPONSIVE  (≤ 768px)
 ═══════════════════════════════════════════════════════════════ */

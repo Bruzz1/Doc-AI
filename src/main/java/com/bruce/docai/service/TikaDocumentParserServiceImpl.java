@@ -11,6 +11,7 @@ import org.apache.tika.mime.MediaType;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,7 +46,18 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
 
     private final VectorStore vectorStore;
     private final Tika tika = new Tika(TikaConfig.getDefaultConfig());
-    private final TokenTextSplitter tokenTextSplitter = new TokenTextSplitter(300, 100, 100, 200, true);
+
+    @Value("${app.rag.chunk-size:500}")
+    private int chunkSize = 500;
+
+    @Value("${app.rag.min-chunk-size-chars:150}")
+    private int minChunkSizeChars = 150;
+
+    @Value("${app.rag.min-chunk-length-to-embed:150}")
+    private int minChunkLengthToEmbed = 150;
+
+    @Value("${app.rag.max-num-chunks:300}")
+    private int maxNumChunks = 300;
 
     @Override
     public void processFile(MultipartFile file) throws IOException {
@@ -108,7 +120,7 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
 
             Map<String, Object> metaMap = buildMetadata(filename, declaredContentType, detectedMediaType, size, bytes.length, extension, metadata);
             Document document = new Document(normalizedContent, metaMap);
-            List<Document> chunks = tokenTextSplitter.split(document);
+            List<Document> chunks = createTextSplitter().split(document);
             if (chunks.isEmpty()) {
                 chunks = List.of(document);
             }
@@ -125,6 +137,20 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
         try (InputStream detectionStream = new ByteArrayInputStream(bytes)) {
             return tika.getDetector().detect(detectionStream, metadata);
         }
+    }
+
+    private TokenTextSplitter createTextSplitter() {
+        int resolvedChunkSize = Math.max(100, chunkSize);
+        int resolvedMinChunkSizeChars = Math.max(1, Math.min(minChunkSizeChars, resolvedChunkSize));
+        int resolvedMinChunkLengthToEmbed = Math.max(1, Math.min(minChunkLengthToEmbed, resolvedChunkSize));
+        int resolvedMaxNumChunks = Math.max(1, maxNumChunks);
+        return new TokenTextSplitter(
+                resolvedChunkSize,
+                resolvedMinChunkSizeChars,
+                resolvedMinChunkLengthToEmbed,
+                resolvedMaxNumChunks,
+                true
+        );
     }
 
     private boolean isAllowedMediaType(MediaType detectedMediaType, String extension) {

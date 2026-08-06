@@ -47,7 +47,10 @@ class TikaDocumentParserServiceImplTest {
 
         List<Document> documents = captureAcceptedDocuments();
         assertFalse(documents.isEmpty());
-        String text = Objects.requireNonNull(documents.get(0).getText());
+        String text = documents.stream()
+                .map(Document::getText)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.joining("\n"));
         assertTrue(text.contains("Hello world"));
         assertTrue(text.contains("Line two\nLine three") || text.contains("Line two\n\nLine three"));
         assertEquals("txt", documents.get(0).getMetadata().get("extension"));

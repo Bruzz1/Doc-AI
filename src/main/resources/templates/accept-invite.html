@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Accept Invite - Doc AI</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Inter, Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: #f3f5fb;
+        }
+
+        .card {
+            width: min(420px, calc(100vw - 32px));
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+            padding: 28px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 1.5rem;
+        }
+
+        p {
+            margin: 0 0 20px;
+            color: #475569;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 1rem;
+            margin-bottom: 14px;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+        }
+
+        button {
+            width: 100%;
+            border: 0;
+            border-radius: 8px;
+            padding: 11px 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            background: #1d4ed8;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #1e40af;
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 12px;
+            min-height: 22px;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+
+        #status.error {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        #status.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .hint {
+            margin-top: 18px;
+            color: #64748b;
+            font-size: 0.82rem;
+        }
+
+        .back-link {
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .back-link a {
+            color: #1d4ed8;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .password-hint {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: -10px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>Join the Team</h1>
+    <p>Complete your account setup with a name and password.</p>
+
+    <form id="accept-form">
+        <div class="form-group">
+            <label for="invite-token">Invite Token</label>
+            <input id="invite-token" name="inviteToken" type="text" placeholder="Paste your invite token" required />
+        </div>
+
+        <div class="form-group">
+            <label for="name">Full Name</label>
+            <input id="name" name="name" type="text" placeholder="John Doe" required />
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" required />
+            <div class="password-hint">Minimum 8 characters</div>
+        </div>
+
+        <button id="accept-btn" type="submit">Create Account</button>
+    </form>
+
+    <div id="status" aria-live="polite"></div>
+
+    <div class="back-link">
+        <a href="/login">Already have an account? Sign in</a>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+const form = document.getElementById('accept-form');
+const acceptBtn = document.getElementById('accept-btn');
+const statusEl = document.getElementById('status');
+
+// Pre-fill invite token from URL parameter if present
+const urlParams = new URLSearchParams(window.location.search);
+const inviteFromUrl = urlParams.get('token');
+if (inviteFromUrl) {
+    document.getElementById('invite-token').value = inviteFromUrl;
+}
+
+async function acceptInvite(event) {
+    event.preventDefault();
+
+    statusEl.textContent = '';
+    statusEl.className = '';
+    acceptBtn.disabled = true;
+
+    const inviteToken = document.getElementById('invite-token').value.trim();
+    const name = document.getElementById('name').value.trim();
+    const password = document.getElementById('password').value;
+
+    // Client-side validation
+    if (!inviteToken) {
+        showError('Please provide an invite token');
+        acceptBtn.disabled = false;
+        return;
+    }
+
+    if (!name) {
+        showError('Please enter your name');
+        acceptBtn.disabled = false;
+        return;
+    }
+
+    if (password.length < 8) {
+        showError('Password must be at least 8 characters');
+        acceptBtn.disabled = false;
+        return;
+    }
+
+    try {
+        const response = await fetch('/auth/accept-invite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ inviteToken, name, password }),
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            showError(data.error || 'Failed to accept invite. Please try again.');
+            return;
+        }
+
+        showSuccess('Account created successfully! Redirecting...');
+        setTimeout(() => {
+            window.location.href = '/app';
+        }, 1500);
+    } catch {
+        showError('Unable to reach server. Please check your connection and try again.');
+    } finally {
+        acceptBtn.disabled = false;
+    }
+}
+
+function showError(message) {
+    statusEl.textContent = message;
+    statusEl.className = 'error';
+}
+
+function showSuccess(message) {
+    statusEl.textContent = message;
+    statusEl.className = 'success';
+}
+
+form.addEventListener('submit', acceptInvite);
+</script>
+</body>
+</html>
+

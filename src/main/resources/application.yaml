@@ -53,7 +53,30 @@ info:
     version: 1.0.0
 
 app:
+  security:
+    jwt:
+      secret: ${APP_SECURITY_JWT_SECRET:replace-this-with-a-long-random-secret-at-least-32-characters}
+      access-token-seconds: 900
+      refresh-token-seconds: 1209600
+      invite-token-seconds: 604800
+    cookie:
+      secure: ${APP_SECURITY_COOKIE_SECURE:true}
+      same-site: ${APP_SECURITY_COOKIE_SAME_SITE:Lax}
+      domain: ${APP_SECURITY_COOKIE_DOMAIN:}
+    bootstrap:
+      enabled: ${APP_SECURITY_BOOTSTRAP_ADMIN_ENABLED:false}
+      email: ${APP_SECURITY_BOOTSTRAP_ADMIN_EMAIL:}
+      password: ${APP_SECURITY_BOOTSTRAP_ADMIN_PASSWORD:}
+      name: ${APP_SECURITY_BOOTSTRAP_ADMIN_NAME:System Admin}
+      organization-id: ${APP_SECURITY_BOOTSTRAP_ORG_ID:default-org}
   rag:
     reset-on-dimension-drift: true
-    top-k: 4
-    similarity-threshold: 0.6
+    top-k: 6
+    fallback-top-k: 10
+    minimum-results-for-answer: 2
+    similarity-threshold: 0.35
+    max-context-chars: 12000
+    chunk-size: 500
+    min-chunk-size-chars: 150
+    min-chunk-length-to-embed: 150
+    max-num-chunks: 300
