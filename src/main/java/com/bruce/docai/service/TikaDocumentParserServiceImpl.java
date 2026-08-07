@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service("tika-parser")
@@ -65,7 +66,16 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
             throw new IllegalArgumentException("File is empty. Allowed types: pdf, doc, docx, txt.");
         }
 
-        ingest(file.getOriginalFilename(), file.getContentType(), file.getSize(), file.getInputStream());
+        ingest(file.getOriginalFilename(), file.getContentType(), file.getSize(), file.getInputStream(), null, null);
+    }
+
+    public void processFile(MultipartFile file, String organizationId, UUID documentId) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty. Allowed types: pdf, doc, docx, txt.");
+        }
+
+        ingest(file.getOriginalFilename(), file.getContentType(), file.getSize(), file.getInputStream(),
+                organizationId, documentId);
     }
 
     @Override
@@ -76,10 +86,20 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
 
         String filename = resource.getFilename();
         long contentLength = safeContentLength(resource);
-        ingest(filename, null, contentLength, resource.getInputStream());
+        ingest(filename, null, contentLength, resource.getInputStream(), "default-org", null);
     }
 
-    private void ingest(String filename, String declaredContentType, long size, InputStream sourceStream) throws IOException {
+    @Override
+    public void processResource(Resource resource, String organizationId, UUID documentId) throws IOException {
+        if (resource == null || !resource.exists()) {
+            throw new IllegalArgumentException("Seed resource does not exist.");
+        }
+        ingest(resource.getFilename(), null, safeContentLength(resource), resource.getInputStream(),
+                organizationId, documentId);
+    }
+
+    private void ingest(String filename, String declaredContentType, long size, InputStream sourceStream,
+                        String organizationId, UUID documentId) throws IOException {
         Metadata metadata = new Metadata();
         if (filename != null) {
             metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, filename);
@@ -119,6 +139,8 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
             }
 
             Map<String, Object> metaMap = buildMetadata(filename, declaredContentType, detectedMediaType, size, bytes.length, extension, metadata);
+            putIfNotNull(metaMap, "organizationId", organizationId);
+            putIfNotNull(metaMap, "documentId", documentId != null ? documentId.toString() : null);
             Document document = new Document(normalizedContent, metaMap);
             List<Document> chunks = createTextSplitter().split(document);
             if (chunks.isEmpty()) {

@@ -60,7 +60,7 @@
         <hr class="sidebar__divider" />
 
         <!-- Document Upload -->
-        <div class="sidebar__upload">
+        <div class="sidebar__upload" id="admin-upload-panel" style="display:none;">
             <p class="upload__title">Upload Document</p>
 
             <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Upload document">
@@ -138,6 +138,9 @@
                         </svg>
                         Manage Invites
                     </a>
+                    <a id="documents-menu-item" href="/admin/documents/page" class="user-dropdown__item" role="menuitem" style="display:none;">
+                        Manage Documents
+                    </a>
                     <button id="logout-btn" class="user-dropdown__item user-dropdown__item--danger" role="menuitem">
                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
                              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -207,6 +210,8 @@ const App = {
     userDropdown:  document.getElementById('user-dropdown'),
     userDropdownEmail: document.getElementById('user-dropdown-email'),
     invitesMenuItem: document.getElementById('invites-menu-item'),
+    documentsMenuItem: document.getElementById('documents-menu-item'),
+    adminUploadPanel: document.getElementById('admin-upload-panel'),
 };
 
 const Auth = {
@@ -256,6 +261,8 @@ const Auth = {
         App.userDropdownEmail.textContent = me.email || me.name || '';
         if (me.role === 'ADMIN') {
             App.invitesMenuItem.style.display = 'flex';
+            App.documentsMenuItem.style.display = 'flex';
+            App.adminUploadPanel.style.display = '';
         }
     },
 
@@ -433,7 +440,7 @@ const Upload = {
         body.append('file', this.selectedFile);
 
         try {
-            const res  = await Auth.apiFetch('/upload', { method: 'POST', body });
+            const res  = await Auth.apiFetch('/admin/documents', { method: 'POST', body });
             const text = await res.text();
             if (res.ok) {
                 this.setStatus('✅ ' + text, 'success');

@@ -6,6 +6,7 @@ import com.bruce.docai.service.UnsupportedDocumentTypeException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,6 +23,7 @@ public class DocumentController {
     private final DocumentService documentParserService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
             documentParserService.processFile(file);

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manage Documents - Admin</title>
+    <style>
+        body { margin: 0; background: #f3f5fb; color: #1e293b; font-family: Inter, Arial, sans-serif; }
+        .container { max-width: 1000px; margin: auto; padding: 24px; }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-top: 20px; }
+        h1, h2 { margin-top: 0; }
+        .back { color: #1d4ed8; text-decoration: none; }
+        form { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        button { border: 0; border-radius: 7px; padding: 10px 15px; font-weight: 600; cursor: pointer; }
+        button.primary { color: white; background: #1d4ed8; }
+        button.danger { color: #b91c1c; background: #fee2e2; }
+        button:disabled { opacity: .6; cursor: not-allowed; }
+        #status { min-height: 20px; margin: 14px 0; }
+        .error { color: #b91c1c; } .success { color: #166534; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 13px 8px; border-bottom: 1px solid #e2e8f0; }
+        th { color: #64748b; font-size: .85rem; }
+        @media (max-width: 700px) { table, thead, tbody, tr, th, td { display: block; } th { display: none; } td { border: 0; padding: 6px 0; } tr { border-bottom: 1px solid #e2e8f0; padding: 12px 0; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back" href="/app">← Back to app</a>
+    <h1>Manage RAG Documents</h1>
+    <p>Files listed here are available to your organization’s knowledge assistant.</p>
+
+    <section class="card">
+        <h2>Add document</h2>
+        <form id="upload-form">
+            <input id="file" type="file" accept=".pdf,.doc,.docx,.txt" required>
+            <button class="primary" id="upload" type="submit">Add to knowledge base</button>
+        </form>
+        <div id="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+        <h2>Loaded files</h2>
+        <div id="documents">Loading…</div>
+    </section>
+</div>
+<script>
+'use strict';
+const statusEl = document.getElementById('status');
+const documentsEl = document.getElementById('documents');
+const uploadBtn = document.getElementById('upload');
+
+async function request(url, options = {}) {
+    const response = await fetch(url, { credentials: 'same-origin', ...options });
+    if (response.status === 401) { window.location.href = '/login'; throw new Error('Unauthorized'); }
+    return response;
+}
+function formatSize(size) { return size < 1024 ? `${size} B` : `${(size / 1024 / 1024).toFixed(2)} MB`; }
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function showStatus(message, type = '') { statusEl.textContent = message; statusEl.className = type; }
+
+async function loadDocuments() {
+    const response = await request('/admin/documents');
+    if (!response.ok) { documentsEl.textContent = 'Unable to load documents.'; return; }
+    const docs = await response.json();
+    if (!docs.length) { documentsEl.textContent = 'No documents have been loaded yet.'; return; }
+    documentsEl.innerHTML = `<table><thead><tr><th>File</th><th>Type</th><th>Size</th><th>Chunks</th><th>Added</th><th></th></tr></thead><tbody>${docs.map(doc => `
+        <tr><td>${escapeHtml(doc.filename)}</td><td>${escapeHtml(doc.contentType || doc.extension)}</td>
+        <td>${formatSize(doc.size)}</td><td>${doc.chunkCount}</td><td>${new Date(doc.createdAt).toLocaleString()}</td>
+        <td><button class="danger" onclick="removeDocument('${doc.id}')">Remove</button></td></tr>`).join('')}</tbody></table>`;
+}
+async function removeDocument(id) {
+    if (!confirm('Remove this document from the RAG knowledge base?')) return;
+    const response = await request(`/admin/documents/${id}`, { method: 'DELETE' });
+    if (!response.ok) { showStatus(await response.text(), 'error'); return; }
+    showStatus('Document removed.', 'success'); await loadDocuments();
+}
+document.getElementById('upload-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const file = document.getElementById('file').files[0]; if (!file) return;
+    uploadBtn.disabled = true; showStatus('Adding document…');
+    const body = new FormData(); body.append('file', file);
+    try {
+        const response = await request('/admin/documents', { method: 'POST', body });
+        if (!response.ok) { showStatus(await response.text(), 'error'); return; }
+        document.getElementById('upload-form').reset(); showStatus('Document added successfully.', 'success'); await loadDocuments();
+    } catch (error) { showStatus('Unable to reach the server.', 'error'); }
+    finally { uploadBtn.disabled = false; }
+});
+loadDocuments().catch(() => { documentsEl.textContent = 'Unable to load documents.'; });
+</script>
+</body>
+</html>
+
+

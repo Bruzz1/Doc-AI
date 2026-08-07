@@ -81,6 +81,10 @@ public class ChatService {
     }
 
     public String getKnownInfo(String question) {
+        return getKnownInfo(question, null);
+    }
+
+    public String getKnownInfo(String question, String organizationId) {
         String normalizedQuestion = normalizeUserInput(question);
         if (normalizedQuestion.isBlank()) {
             return EMPTY_QUESTION_RESPONSE;
@@ -88,7 +92,7 @@ public class ChatService {
 
         long start = System.currentTimeMillis();
 
-        List<Document> documents = findSimilarDocuments(normalizedQuestion);
+        List<Document> documents = findSimilarDocuments(normalizedQuestion, organizationId);
         long afterSearch = System.currentTimeMillis();
 
         if (documents.isEmpty()) {
@@ -126,13 +130,17 @@ public class ChatService {
     }
 
     List<Document> findSimilarDocuments(String question) {
-        List<Document> primaryMatches = deduplicateDocuments(search(question, topK, similarityThreshold));
+        return findSimilarDocuments(question, null);
+    }
+
+    List<Document> findSimilarDocuments(String question, String organizationId) {
+        List<Document> primaryMatches = deduplicateDocuments(search(question, topK, similarityThreshold, organizationId));
 
         if (primaryMatches.size() >= Math.max(1, minimumResultsForAnswer)) {
             return primaryMatches;
         }
 
-        List<Document> fallbackMatches = deduplicateDocuments(search(question, Math.max(topK, fallbackTopK), null));
+        List<Document> fallbackMatches = deduplicateDocuments(search(question, Math.max(topK, fallbackTopK), null, organizationId));
         if (fallbackMatches.isEmpty()) {
             return primaryMatches;
         }
@@ -184,13 +192,16 @@ public class ChatService {
                 .collect(Collectors.joining(", "));
     }
 
-    private List<Document> search(String question, int requestedTopK, Double threshold) {
+    private List<Document> search(String question, int requestedTopK, Double threshold, String organizationId) {
         SearchRequest.Builder builder = SearchRequest.builder()
                 .query(question)
                 .topK(Math.max(1, requestedTopK));
 
         if (threshold != null) {
             builder.similarityThreshold(threshold);
+        }
+        if (organizationId != null && !organizationId.isBlank()) {
+            builder.filterExpression("organizationId == '" + organizationId.replace("'", "\\'") + "'");
         }
 
         List<Document> matches = vectorStore.similaritySearch(builder.build());

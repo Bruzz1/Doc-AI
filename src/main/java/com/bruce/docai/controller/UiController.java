@@ -50,4 +50,10 @@ public class UiController {
     public String adminInvites() {
         return "admin-invites";
     }
+
+    @GetMapping("/admin/documents/page")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String adminDocuments() {
+        return "admin-documents";
+    }
 }

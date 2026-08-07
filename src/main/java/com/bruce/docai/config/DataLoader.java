@@ -1,6 +1,8 @@
 package com.bruce.docai.config;
 
 import com.bruce.docai.service.DocumentService;
+import com.bruce.docai.model.RagDocument;
+import com.bruce.docai.repository.RagDocumentRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +13,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -21,6 +27,7 @@ public class DataLoader {
 
     private final JdbcClient jdbcClient;
     private final DocumentService documentService;
+    private final RagDocumentRepository ragDocumentRepository;
 
     @Value("classpath:/RJBRUCE_CV.pdf")
     private Resource pdfResource;
@@ -58,7 +65,15 @@ public class DataLoader {
         if (count == 0) {
             log.info("Loading personal resume into vector_store");
             try {
-                documentService.processResource(pdfResource);
+                UUID documentId = UUID.randomUUID();
+                byte[] bytes = pdfResource.getInputStream().readAllBytes();
+                String filename = pdfResource.getFilename() != null ? pdfResource.getFilename() : "seed-document";
+                ragDocumentRepository.insert(new RagDocument(documentId, "default-org", filename,
+                        extension(filename), "application/pdf", bytes.length, 0, null), checksum(bytes));
+                documentService.processResource(pdfResource, "default-org", documentId);
+                int chunkCount = jdbcClient.sql("SELECT COUNT(*) FROM vector_store WHERE metadata ->> 'documentId' = :documentId")
+                        .param("documentId", documentId.toString()).query(Integer.class).single();
+                ragDocumentRepository.updateChunkCount(documentId, chunkCount);
             } catch (Exception ex) {
                 throw new IllegalStateException("Failed to preload seed document into vector_store.", ex);
             }
@@ -107,5 +122,18 @@ public class DataLoader {
                 )
                 """.formatted(expectedVectorDimension)).update();
         jdbcClient.sql("CREATE INDEX ON vector_store USING HNSW (embedding vector_cosine_ops)").update();
+    }
+
+    private String extension(String filename) {
+        int dot = filename.lastIndexOf('.');
+        return dot < 0 ? "" : filename.substring(dot + 1).toLowerCase();
+    }
+
+    private String checksum(byte[] bytes) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 is unavailable.", ex);
+        }
     }
 }
