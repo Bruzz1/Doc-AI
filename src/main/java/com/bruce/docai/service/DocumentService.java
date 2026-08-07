@@ -8,11 +8,7 @@ import java.util.UUID;
 
 public interface DocumentService {
 
-    void processFile(MultipartFile file) throws IOException;
-
-    default void processFile(MultipartFile file, String organizationId, UUID documentId) throws IOException {
-        processFile(file);
-    }
+    void processFile(MultipartFile file, String organizationId, UUID documentId) throws IOException;
 
     void processResource(Resource resource) throws IOException;
 

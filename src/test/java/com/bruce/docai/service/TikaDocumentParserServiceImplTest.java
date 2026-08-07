@@ -43,7 +43,7 @@ class TikaDocumentParserServiceImplTest {
                 "Hello\tworld\r\n\r\nLine   two\r\nLine\tthree".getBytes(java.nio.charset.StandardCharsets.UTF_8)
         );
 
-        service.processFile(file);
+        service.processFile(file, "test-org", null);
 
         List<Document> documents = captureAcceptedDocuments();
         assertFalse(documents.isEmpty());
@@ -65,7 +65,7 @@ class TikaDocumentParserServiceImplTest {
                 readClasspathPdf()
         );
 
-        service.processFile(file);
+        service.processFile(file, "test-org", null);
 
         List<Document> documents = captureAcceptedDocuments();
         assertFalse(documents.isEmpty());
@@ -82,7 +82,7 @@ class TikaDocumentParserServiceImplTest {
                 createDocx()
         );
 
-        service.processFile(file);
+        service.processFile(file, "test-org", null);
 
         List<Document> documents = captureAcceptedDocuments();
         assertFalse(documents.isEmpty());
@@ -101,7 +101,8 @@ class TikaDocumentParserServiceImplTest {
                 "not allowed".getBytes(java.nio.charset.StandardCharsets.UTF_8)
         );
 
-        UnsupportedDocumentTypeException exception = assertThrows(UnsupportedDocumentTypeException.class, () -> service.processFile(file));
+        UnsupportedDocumentTypeException exception = assertThrows(UnsupportedDocumentTypeException.class,
+                () -> service.processFile(file, "test-org", null));
         assertTrue(exception.getMessage().contains("Allowed types: pdf, doc, docx, txt."));
     }
 

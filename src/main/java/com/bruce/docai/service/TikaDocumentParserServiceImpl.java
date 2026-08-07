@@ -61,13 +61,6 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
     private int maxNumChunks = 300;
 
     @Override
-    public void processFile(MultipartFile file) throws IOException {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty. Allowed types: pdf, doc, docx, txt.");
-        }
-
-        ingest(file.getOriginalFilename(), file.getContentType(), file.getSize(), file.getInputStream(), null, null);
-    }
 
     public void processFile(MultipartFile file, String organizationId, UUID documentId) throws IOException {
         if (file == null || file.isEmpty()) {

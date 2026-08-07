@@ -180,103 +180,12 @@ hr { border: none; border-top: 1px solid var(--color-border); }
     transition: opacity 0.2s ease;
 }
 
-/* ── Divider ── */
-.sidebar__divider {
-    margin: 8px 0;
-}
-
-/* ── Upload panel ── */
-.sidebar__upload {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex: 1;               /* push footer to bottom */
-    overflow: hidden;
-    transition: opacity 0.2s ease;
-}
-
-.upload__title {
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-muted);
-    white-space: nowrap;
-}
-
-.drop-zone {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    padding: 14px 10px;
-    border: 1.5px dashed var(--color-border);
-    border-radius: var(--radius-md);
-    color: var(--color-muted);
-    cursor: pointer;
-    text-align: center;
-    transition: border-color 0.2s, background 0.2s, color 0.2s;
-    user-select: none;
-}
-
-.drop-zone:hover,
-.drop-zone--over {
-    border-color: var(--color-primary);
-    background: rgba(37, 99, 235, 0.04);
-    color: var(--color-primary);
-}
-
-.drop-zone__text { font-size: 0.8rem; }
-
-.drop-zone__browse {
-    color: var(--color-primary);
-    text-decoration: underline;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.drop-zone__hint {
-    font-size: 0.7rem;
-    color: var(--color-muted);
-}
-
-.upload__status {
-    font-size: 0.75rem;
-    min-height: 1rem;
-    word-break: break-all;
-    color: var(--color-muted);
-}
-
-.upload__status--ready   { color: var(--color-text); }
-.upload__status--loading { color: var(--color-muted); }
-.upload__status--success { color: #16a34a; }
-.upload__status--error   { color: #dc2626; }
-
-.upload__btn {
-    width: 100%;
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    background: var(--color-primary);
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: background 0.15s;
-    white-space: nowrap;
-}
-
-.upload__btn:hover:not(:disabled) { background: var(--color-primary-dark); }
-
-.upload__btn:disabled {
-    background: var(--color-border);
-    color: var(--color-muted);
-    cursor: not-allowed;
-}
-
 /* ── Footer ── */
 .sidebar__footer {
     font-size: 0.7rem;
     color: var(--color-muted);
     text-align: center;
+    margin-top: auto;
     padding-top: 8px;
     white-space: nowrap;
     overflow: hidden;
@@ -291,7 +200,6 @@ hr { border: none; border-top: 1px solid var(--color-border); }
 
 .sidebar--collapsed .brand-info,
 .sidebar--collapsed .nav-label,
-.sidebar--collapsed .sidebar__upload,
 .sidebar--collapsed .sidebar__footer {
     opacity: 0;
     pointer-events: none;
@@ -746,7 +654,6 @@ hr { border: none; border-top: 1px solid var(--color-border); }
     /* Restore labels that were hidden in desktop collapsed state */
     .sidebar--collapsed .brand-info,
     .sidebar--collapsed .nav-label,
-    .sidebar--collapsed .sidebar__upload,
     .sidebar--collapsed .sidebar__footer {
         opacity: 1;
         pointer-events: auto;

@@ -49,7 +49,6 @@ public class SecurityConfig {
                     String uri = request.getRequestURI();
                     boolean isApiRequest = uri.startsWith("/chat")
                             || uri.startsWith("/faqs")
-                            || uri.startsWith("/upload")
                             || uri.startsWith("/auth/change-password")
                             || uri.startsWith("/auth/me")
                             || uri.startsWith("/auth/invites");

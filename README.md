@@ -202,9 +202,6 @@ The upload pipeline is:
 If indexing fails, the service removes both the document record and any vectors
 created for that upload.
 
-There is also a legacy admin endpoint, `POST /upload`. It indexes a file through the
-older parser method but does not create the organization-aware `rag_documents` record.
-Use `/admin/documents` for the normal application workflow.
 
 ## Chat and RAG API
 

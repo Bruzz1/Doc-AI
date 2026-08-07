@@ -57,31 +57,6 @@
             </a>
         </nav>
 
-        <hr class="sidebar__divider" />
-
-        <!-- Document Upload -->
-        <div class="sidebar__upload" id="admin-upload-panel" style="display:none;">
-            <p class="upload__title">Upload Document</p>
-
-            <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Upload document">
-                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
-                <span class="drop-zone__text">
-                    Drag &amp; drop or
-                    <label for="file-input" class="drop-zone__browse">browse</label>
-                </span>
-                <span class="drop-zone__hint">PDF · DOC · DOCX · TXT</span>
-                <input type="file" id="file-input" accept=".pdf,.doc,.docx,.txt" hidden />
-            </div>
-
-            <p id="upload-status" class="upload__status" aria-live="polite"></p>
-            <button id="upload-btn" class="upload__btn" disabled>Upload</button>
-        </div>
-
         <!-- Footer -->
         <div class="sidebar__footer">Powered by Spring AI &amp; pgvector</div>
 
@@ -201,17 +176,12 @@ const App = {
     sendBtn:       document.getElementById('send-btn'),
     modeToggle:    document.getElementById('mode-toggle'),
     modeLabel:     document.getElementById('mode-label'),
-    dropZone:      document.getElementById('drop-zone'),
-    fileInput:     document.getElementById('file-input'),
-    uploadBtn:     document.getElementById('upload-btn'),
-    uploadStatus:  document.getElementById('upload-status'),
     logoutBtn:     document.getElementById('logout-btn'),
     userAvatarBtn: document.getElementById('user-avatar-btn'),
     userDropdown:  document.getElementById('user-dropdown'),
     userDropdownEmail: document.getElementById('user-dropdown-email'),
     invitesMenuItem: document.getElementById('invites-menu-item'),
     documentsMenuItem: document.getElementById('documents-menu-item'),
-    adminUploadPanel: document.getElementById('admin-upload-panel'),
 };
 
 const Auth = {
@@ -262,7 +232,6 @@ const Auth = {
         if (me.role === 'ADMIN') {
             App.invitesMenuItem.style.display = 'flex';
             App.documentsMenuItem.style.display = 'flex';
-            App.adminUploadPanel.style.display = '';
         }
     },
 
@@ -409,85 +378,11 @@ const Chat = {
 };
 
 
-/* ─── Upload ─────────────────────────────────────────── */
-const Upload = {
-    selectedFile: null,
-
-    setStatus(message, state = '') {
-        App.uploadStatus.textContent = message;
-        App.uploadStatus.className   = `upload__status${state ? ' upload__status--' + state : ''}`;
-    },
-
-    selectFile(file) {
-        if (!file) return;
-        this.selectedFile      = file;
-        App.uploadBtn.disabled = false;
-        this.setStatus(`📄 ${file.name}`, 'ready');
-    },
-
-    reset() {
-        this.selectedFile      = null;
-        App.fileInput.value    = '';
-        App.uploadBtn.disabled = true;
-    },
-
-    async upload() {
-        if (!this.selectedFile) return;
-        App.uploadBtn.disabled = true;
-        this.setStatus('Uploading…', 'loading');
-
-        const body = new FormData();
-        body.append('file', this.selectedFile);
-
-        try {
-            const res  = await Auth.apiFetch('/admin/documents', { method: 'POST', body });
-            const text = await res.text();
-            if (res.ok) {
-                this.setStatus('✅ ' + text, 'success');
-                this.reset();
-            } else {
-                this.setStatus('❌ ' + text, 'error');
-                App.uploadBtn.disabled = false;
-            }
-        } catch {
-            this.setStatus('❌ Upload failed. Check your connection.', 'error');
-            App.uploadBtn.disabled = false;
-        }
-    },
-
-    init() {
-        App.fileInput.addEventListener('change', () => {
-            if (App.fileInput.files[0]) this.selectFile(App.fileInput.files[0]);
-        });
-
-        App.dropZone.addEventListener('click', e => {
-            if (e.target.tagName !== 'LABEL') App.fileInput.click();
-        });
-
-        App.dropZone.addEventListener('keydown', e => {
-            if (e.key === 'Enter' || e.key === ' ') App.fileInput.click();
-        });
-
-        App.dropZone.addEventListener('dragover',  e  => { e.preventDefault(); App.dropZone.classList.add('drop-zone--over'); });
-        App.dropZone.addEventListener('dragleave', () => App.dropZone.classList.remove('drop-zone--over'));
-        App.dropZone.addEventListener('dragend',   () => App.dropZone.classList.remove('drop-zone--over'));
-        App.dropZone.addEventListener('drop', e => {
-            e.preventDefault();
-            App.dropZone.classList.remove('drop-zone--over');
-            if (e.dataTransfer.files[0]) this.selectFile(e.dataTransfer.files[0]);
-        });
-
-        App.uploadBtn.addEventListener('click', () => this.upload());
-    },
-};
-
-
 /* ─── Boot ───────────────────────────────────────────── */
 (async () => {
     await Auth.init();
     Sidebar.init();
     Chat.init();
-    Upload.init();
     App.logoutBtn.addEventListener('click', () => Auth.logout());
 
     // User avatar dropdown toggle
