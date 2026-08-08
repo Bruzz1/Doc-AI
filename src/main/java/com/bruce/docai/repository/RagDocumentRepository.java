@@ -57,6 +57,13 @@ public class RagDocumentRepository {
                 .single() > 0;
     }
 
+    public int countByOrganizationId(String organizationId) {
+        return jdbcClient.sql("SELECT COUNT(*) FROM rag_documents WHERE organization_id = :organizationId")
+                .param("organizationId", organizationId)
+                .query(Integer.class)
+                .single();
+    }
+
     public void insert(RagDocument document, String checksum) {
         try {
             jdbcClient.sql("""

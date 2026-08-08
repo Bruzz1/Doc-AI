@@ -4,6 +4,7 @@ import com.bruce.docai.model.User;
 import com.bruce.docai.repository.UserRepository;
 import com.bruce.docai.security.service.JwtService;
 import com.bruce.docai.security.service.AuthCookieService;
+import com.bruce.docai.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,13 +46,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (SecurityContextHolder.getContext().getAuthentication() == null) {
-            jwtService.extractEmail(token)
-                    .flatMap(userRepository::findByEmail)
-                    .ifPresent(this::setAuthentication);
-        }
+        try {
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                jwtService.extractEmail(token)
+                        .flatMap(userRepository::findByEmail)
+                        .ifPresent(this::setAuthentication);
+            }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     private Optional<String> extractBearerToken(HttpServletRequest request) {
@@ -70,6 +75,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 List.of(new SimpleGrantedAuthority("ROLE_" + role))
         );
         SecurityContextHolder.getContext().setAuthentication(auth);
+        TenantContext.set(user.getOrganizationId());
     }
 }
 

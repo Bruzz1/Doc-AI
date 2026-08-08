@@ -6,7 +6,11 @@ spring:
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   sql:
     init:
-      mode: always
+      mode: never
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
   datasource:
     url: jdbc:postgresql://localhost:5432/ics
     username: postgres
@@ -17,7 +21,7 @@ spring:
       max-request-size: 20MB
   jpa:
     hibernate:
-      ddl-auto: update # for dev
+      ddl-auto: validate
     show-sql: true
   ai:
     ollama:
@@ -30,6 +34,7 @@ spring:
           model: nomic-embed-text
     vectorstore:
       pgvector:
+        initialize-schema: false
         index-type: HNSW
         distance-type: COSINE_DISTANCE
         dimensions: 768
@@ -53,6 +58,9 @@ info:
     version: 1.0.0
 
 app:
+  tenant:
+    rls-enabled: ${APP_TENANT_RLS_ENABLED:false}
+    default-max-documents: ${APP_TENANT_DEFAULT_MAX_DOCUMENTS:0}
   security:
     jwt:
       secret: ${APP_SECURITY_JWT_SECRET:replace-this-with-a-long-random-secret-at-least-32-characters}
@@ -70,7 +78,6 @@ app:
       name: ${APP_SECURITY_BOOTSTRAP_ADMIN_NAME:System Admin}
       organization-id: ${APP_SECURITY_BOOTSTRAP_ORG_ID:default-org}
   rag:
-    reset-on-dimension-drift: true
     top-k: 6
     fallback-top-k: 10
     minimum-results-for-answer: 2

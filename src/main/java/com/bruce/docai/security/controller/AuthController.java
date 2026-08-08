@@ -49,6 +49,10 @@ public class AuthController {
 
     private final AuthCookieService authCookieService;
 
+    private final com.bruce.docai.service.TenantService tenantService;
+
+    private final com.bruce.docai.service.AuditService auditService;
+
     @PostMapping("/accept-invite")
     public ResponseEntity<Map<String, String>> acceptInvite(
             @RequestBody AcceptInviteRequest request,
@@ -170,9 +174,14 @@ public class AuthController {
     ) {
         User admin = (User) authentication.getPrincipal();
 
-        String organizationId = request.organizationId() == null || request.organizationId().isBlank()
-                ? admin.getOrganizationId()
-                : request.organizationId();
+        // Tenant isolation: an admin may only invite users into their own organization.
+        String requestedOrg = request.organizationId();
+        if (requestedOrg != null && !requestedOrg.isBlank()
+                && !requestedOrg.equals(admin.getOrganizationId())) {
+            throw new IllegalArgumentException("You can only invite users into your own organization.");
+        }
+        String organizationId = admin.getOrganizationId();
+        tenantService.requireActive(organizationId);
 
         String role = request.role() == null || request.role().isBlank()
                 ? "USER"
@@ -184,6 +193,8 @@ public class AuthController {
                 role,
                 admin.getEmail()
         );
+
+        auditService.record(organizationId, admin.getEmail(), "INVITE_CREATE", request.email(), "role=" + role);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "inviteToken", inviteToken,

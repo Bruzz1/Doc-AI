@@ -104,6 +104,20 @@ class ChatServiceTest {
         verify(chatClient).prompt(any(Prompt.class));
     }
 
+    @Test
+    void appliesOrganizationFilterToSearchRequests() {
+        org.mockito.ArgumentCaptor<SearchRequest> captor = org.mockito.ArgumentCaptor.forClass(SearchRequest.class);
+        when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of());
+
+        service.getKnownInfo("anything", "org-42");
+
+        verify(vectorStore, org.mockito.Mockito.atLeastOnce()).similaritySearch(captor.capture());
+        boolean allScopedToOrg = captor.getAllValues().stream()
+                .allMatch(request -> request.getFilterExpression() != null
+                        && request.getFilterExpression().toString().contains("org-42"));
+        assertTrue(allScopedToOrg, "every vector search must be scoped to the caller's organization");
+    }
+
     private Map<String, Object> metadata(Object... keyValues) {
         Map<String, Object> metadata = new HashMap<>();
         for (int i = 0; i < keyValues.length; i += 2) {

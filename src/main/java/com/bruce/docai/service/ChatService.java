@@ -7,6 +7,7 @@ import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -201,7 +202,9 @@ public class ChatService {
             builder.similarityThreshold(threshold);
         }
         if (organizationId != null && !organizationId.isBlank()) {
-            builder.filterExpression("organizationId == '" + organizationId.replace("'", "\\'") + "'");
+            builder.filterExpression(new FilterExpressionBuilder()
+                    .eq("organizationId", organizationId)
+                    .build());
         }
 
         List<Document> matches = vectorStore.similaritySearch(builder.build());

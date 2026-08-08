@@ -1,0 +1,127 @@
+# Employee Handbook
+
+## Company Information
+Company Name: Acme Technologies
+Founded: 2018
+Headquarters: Makati City, Philippines
+CEO: Maria Santos
+
+## Working Hours
+Employees work from Monday to Friday.
+Office hours are from 9:00 AM to 6:00 PM.
+Flexible work arrangements are available for approved employees.
+
+## Leave Policy
+- Annual Leave: 15 days per year
+- Sick Leave: 10 days per year
+- Emergency Leave: 3 days per year
+
+Unused annual leave can be carried over for up to 5 days into the next calendar year.
+
+## IT Support
+For technical issues, contact the IT Help Desk.
+
+Email: it-support@acme.example
+Phone: +63 2 8123 4567
+
+Support Hours:
+Monday to Friday
+8:00 AM - 7:00 PM
+
+## Password Policy
+- Passwords must contain at least 12 characters.
+- Passwords must include uppercase, lowercase, numbers, and special characters.
+- Passwords expire every 90 days.
+- Multi-factor authentication (MFA) is required.
+
+## Travel Policy
+Employees traveling for business are eligible for reimbursement.
+
+Maximum hotel allowance:
+- Metro Manila: PHP 6,000 per night
+- Outside Metro Manila: PHP 4,000 per night
+
+Meal allowance:
+PHP 1,200 per day
+
+## Products
+
+Product: Alpha CRM
+Release Year: 2023
+Primary Users: Sales Teams
+
+Product: Beta Analytics
+Release Year: 2024
+Primary Users: Business Analysts
+
+Product: Gamma AI Assistant
+Release Year: 2025
+Primary Users: Customer Support
+
+## Frequently Asked Questions
+
+Q: How often do passwords expire?
+A: Every 90 days.
+
+Q: Is MFA required?
+A: Yes.
+
+Q: How many annual leave days are provided?
+A: 15 days.
+
+Q: What is the office schedule?
+A: Monday to Friday, 9:00 AM to 6:00 PM.
+
+
+
+============================================
+sample questions
+Basic Retrieval
+What is the name of the company?
+Who is the CEO?
+When was the company founded?
+Where is the headquarters located?
+
+Policy Questions
+How many annual leave days do employees receive?
+How many sick leave days are allowed?
+Can unused annual leave be carried over?
+What are the office working hours?
+
+IT Questions
+What is the IT support email?
+What are the IT support hours?
+How long must passwords be?
+Is multi-factor authentication required?
+
+
+Product Questions
+Which product was released in 2025?
+Who uses Beta Analytics?
+What products does the company offer?
+
+
+Reasoning Questions
+Which department would most likely use Alpha CRM?
+If an employee forgets their password after 90 days, what policy applies?
+If an employee travels to Metro Manila, what is the maximum hotel reimbursement?
+What is the total possible leave days in a year (annual + sick + emergency)?
+Which product is the newest?
+
+
+Multi-hop Questions
+Who should an employee contact if they cannot log in because MFA is required?
+Which product would a customer support employee probably use?
+How many days after founding was Gamma AI Assistant released? (Requires calculating the year difference.)
+Which policy mentions both security and authentication?
+What information would a new employee need to know before their first day?
+
+
+Negative (Hallucination) Tests
+What is the company's stock ticker?
+What is the CEO's birthday?
+Does the company offer dental insurance?
+What programming language does Gamma AI Assistant use?
+Is Saturday a working day?
+
+For questions 26–30, a well-configured RAG system should respond that the information is not present in the provided document, rather than inventing an answer. These are useful for testing hallucination resistance.

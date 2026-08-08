@@ -37,13 +37,15 @@ public class AdminDocumentController {
 
     @PostMapping
     public ResponseEntity<RagDocument> add(@RequestParam("file") MultipartFile file, Authentication authentication) throws IOException {
+        User user = (User) authentication.getPrincipal();
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(knowledgeService.add(file, organizationId(authentication)));
+                .body(knowledgeService.add(file, user.getOrganizationId(), user.getEmail()));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> remove(@PathVariable UUID id, Authentication authentication) {
-        knowledgeService.remove(id, organizationId(authentication));
+        User user = (User) authentication.getPrincipal();
+        knowledgeService.remove(id, user.getOrganizationId(), user.getEmail());
         return ResponseEntity.ok(Map.of("message", "Document removed from the RAG knowledge base."));
     }
 

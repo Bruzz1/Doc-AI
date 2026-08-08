@@ -15,8 +15,6 @@ import org.springframework.security.core.Authentication;
 public class ChatController {
 
     private final ChatService chatService;
-
-
     @GetMapping("/chat")
     public String chat(@RequestParam(value = "message") String question) {
         return chatService.chat(question);
@@ -25,7 +23,11 @@ public class ChatController {
     @GetMapping("/faqs")
     public String getKnownInfo(@RequestParam(value = "question") String question, Authentication authentication) {
         User user = (User) authentication.getPrincipal();
-        return chatService.getKnownInfo(question, user.getOrganizationId());
+        String organizationId = user.getOrganizationId();
+        if (organizationId == null || organizationId.isBlank()) {
+            throw new IllegalStateException("Your account is not assigned to an organization.");
+        }
+        return chatService.getKnownInfo(question, organizationId);
 
     }
 

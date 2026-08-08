@@ -37,8 +37,11 @@ Important source locations:
 | Web controllers | `controller/`, `security/controller/` |
 | RAG and parsing | `service/KnowledgeService.java`, `service/ChatService.java`, `service/TikaDocumentParserServiceImpl.java` |
 | Security | `security/config/SecurityConfig.java`, `security/filter/`, `security/service/` |
-| Persistence | `model/`, `repository/`, `src/main/resources/schema.sql` |
+| Persistence | `model/`, `repository/`, `src/main/resources/db/migration/` |
 | UI | `src/main/resources/templates/`, `src/main/resources/static/style.css` |
+
+See [`docs/user-flow.md`](docs/user-flow.md) for user-journey, request-time tenant
+isolation, and refresh-token rotation diagrams.
 
 ## Requirements
 
@@ -92,8 +95,11 @@ mvn spring-boot:run
 
 The server listens on `http://localhost:8081`.
 
-On first startup, `DataLoader` checks the vector dimension and loads
-`src/main/resources/RJBRUCE_CV.pdf` into `default-org` if `vector_store` is empty.
+The database schema is managed by **Flyway** (`src/main/resources/db/migration/`).
+Migrations run automatically on startup and Hibernate is set to `ddl-auto=validate`,
+so the JPA entities are checked against the Flyway schema rather than mutating it.
+Documents are added at runtime by admins through `/admin/documents`; there is no
+startup data seeding.
 
 ## First admin account
 
@@ -264,6 +270,8 @@ with environment variables or Spring properties.
 | `app.rag.chunk-size` | `500` | Chunking target size |
 | `app.security.jwt.secret` | Development placeholder | JWT signing secret |
 | `app.security.cookie.secure` | `true` | Require HTTPS for cookies |
+| `app.tenant.rls-enabled` | `false` | Set `app.current_org` for Postgres RLS backstop |
+| `app.tenant.default-max-documents` | `0` | Per-tenant document cap fallback (`0` = unlimited) |
 
 For production, set a long random JWT secret using:
 
@@ -288,12 +296,43 @@ deduplication, context truncation, and grounded answers.
 The full Spring context test is disabled because it requires external PostgreSQL/
 pgvector and runtime AI services.
 
+## Multi-tenancy
+
+Doc-AI is a pooled (shared-schema) multi-tenant application. Every tenant is an
+`organizations` row, and tenant-owned data carries an `organization_id`. Isolation is
+enforced in depth:
+
+1. **Application layer.** On each authenticated request, `JwtAuthFilter` binds the
+   caller's organization (from the JWT `orgId` claim) into a request-scoped
+   `TenantContext`, cleared at the end of the request.
+2. **Query layer.** RAG retrieval and vector deletes are scoped with Spring AI's
+   `FilterExpressionBuilder` (typed, no string interpolation). `/faqs` requires an
+   organization and refuses to run without one.
+3. **Database layer (optional backstop).** A Flyway migration defines Postgres
+   Row-Level Security policies on `rag_documents` and `vector_store`. Enable app-side
+   enforcement with `APP_TENANT_RLS_ENABLED=true`, which sets `app.current_org` per
+   write transaction. Policies fall through to allow-all when the setting is unset, so
+   migrations and admin jobs are unaffected.
+
+Additional guardrails:
+
+- **Tenant lifecycle.** `TenantService` requires an organization to exist and be
+  `ACTIVE` before invites or uploads are allowed.
+- **Invite isolation.** Admins can only invite users into their **own** organization.
+- **Per-tenant quotas.** `organizations.max_documents` (or the
+  `APP_TENANT_DEFAULT_MAX_DOCUMENTS` fallback) caps documents per tenant.
+- **Audit trail.** Document upload/delete and invite creation are recorded in
+  `audit_log` with the actor and organization.
+
+> **RLS verification:** Row-Level Security requires the application to connect as a
+> non-superuser role (a table owner bypasses RLS unless `FORCE ROW LEVEL SECURITY` is
+> set, which the migration does). Verify the isolation behavior against a real
+> PostgreSQL instance before enabling `APP_TENANT_RLS_ENABLED` in production.
+
 ## Current limitations
 
 - Ollama must be installed and running separately; it is not enabled in `compose.yaml`.
-- The application is configured for development schema updates with
-  `spring.jpa.hibernate.ddl-auto=update`.
-- The seed PDF is loaded into `default-org` only when the vector store is empty.
+- The schema is managed by Flyway with `spring.jpa.hibernate.ddl-auto=validate`.
 - `/chat` is direct model chat and does not apply organization-filtered RAG retrieval.
 - `/webhook/whatsapp` exists as a placeholder, but no WhatsApp webhook endpoint is
   implemented yet.
