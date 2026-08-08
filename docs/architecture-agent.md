@@ -1,9 +1,9 @@
 # Doc-AI — Configurable Agent & Multi-Channel Architecture
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Last updated:** 2026-08-08
 **App version:** 0.0.1-SNAPSHOT (see `pom.xml`)
-**Status:** Proposed (extends the current RAG app in `docs/architecture.md`)
+**Status:** Implemented on branch `feature/configurable-agent` (extends `docs/architecture.md`)
 
 ## Goal
 
@@ -164,3 +164,57 @@ flowchart TB
 | Stateless requests | Optional `Conversation`/`Message` memory (AGENTIC mode) |
 | Admin manages documents only | Admin manages agents at `/admin/agents` **and** tests them at `/app` |
 | Chat UI hits raw RAG | Chat UI hits configured agent (live preview of admin changes) |
+
+---
+
+## Implementation status (v1.1.0)
+
+Delivered on branch `feature/configurable-agent`:
+
+- **Agent core** — `AgentOrchestrator.handle(ChatRequest)` is the single pipeline for
+  every channel: `enabled-check → inbound guardrails → mode switch → outbound guardrails`.
+- **Modes** — `SIMPLE_RAG` (behaviorally identical to the original app, delegates to
+  `ChatService.getKnownInfo`) and `AGENTIC` (tool-calling + conversation memory).
+- **Channels** — `WEB_ADMIN` (existing chat UI as a faithful test channel), `WIDGET`
+  (public `POST /widget/chat` + embeddable `widget.js`), `WHATSAPP` (Cloud API webhook
+  with verify + HMAC + async reply).
+- **Configurable tools** — `AgentTool` interface + `ToolRegistry` auto-discovers tool
+  beans by name. `AgentConfig.enabledTools` (CSV) selects them per tenant; blank = all
+  tools. Adding a tool = add a bean, no orchestrator change. Tenant is passed via
+  `ToolContext` (never chosen by the model).
+- **Guardrails** — per-org sliding-window rate limit, input/output truncation, blocked-term
+  redaction (redact before truncate).
+- **Configurable disabled message** — `AgentConfig.disabledMessage` shown on every channel
+  when `enabled=false` (falls back to a built-in default).
+- **Conversation memory** — keyed by `(organizationId, channel, userRef)`. Idle timeout
+  (`app.agent.conversation-idle-minutes`, default 30; `0` disables) clears stale history for
+  a fresh start; explicit reset via `DELETE /faqs/conversation` (admin "New chat" button).
+- **Admin UI** — `/admin/agents` (ADMIN-only) edits name, mode, system prompt, model,
+  temperature, enabled tools, disabled message, and the enabled flag.
+
+Configuration is **per organization**: exactly one `agent_config` row per tenant
+(`uq_agent_config_org`), shared by all users and all channels in that org, isolated from
+other orgs by RLS.
+
+## Roadmap: agent scoping
+
+Today a tenant has **one** agent. If differentiated behavior is needed later, choose the
+lightest option that fits the actual need:
+
+| Need | Recommended approach | Status |
+|------|----------------------|--------|
+| Different **companies / customers** (separate users, separate knowledge base) | **Separate organizations** — full isolation of config, documents, guardrails, memory | ✅ Available today |
+| Same bot, **different tone/limits per channel** (e.g. terse on WhatsApp, detailed on web) | **Per-channel overrides** — same agent, small per-channel deltas on prompt/model | ⏳ Future (lightest) |
+| **Multiple bots for one company**, sharing users and some documents (e.g. HR bot + Sales bot) | **Multiple agents per org** — drop `uq_agent_config_org`, add `agent_id` + a channel→agent mapping / default flag; `getForOrganization` → `getForOrganizationAndChannel`; add agent-select UI | ⏳ Future (heaviest) |
+
+**Guidance**
+
+- Using **separate orgs** as a stand-in for "multiple bots in one company" works for
+  tenant-like separation, but has costs: a user belongs to exactly one org (needs multiple
+  accounts to reach multiple bots), shared documents must be duplicated per org, and each
+  WhatsApp number maps to a single org. Prefer it only when the split is truly a separate
+  tenant/customer.
+- When a real second use case appears, implement **per-channel overrides before**
+  full multi-agent — it covers most "different behavior" needs at a fraction of the
+  complexity, and the current schema was intentionally left open to layer it on without
+  breaking the one-config-per-tenant contract.
