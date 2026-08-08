@@ -100,3 +100,7 @@ app:
     access-token: ${APP_WHATSAPP_ACCESS_TOKEN:}
     api-base-url: ${APP_WHATSAPP_API_BASE_URL:https://graph.facebook.com/v20.0}
     default-organization-id: ${APP_WHATSAPP_DEFAULT_ORG_ID:}
+  guardrails:
+    max-input-chars: ${APP_GUARDRAILS_MAX_INPUT_CHARS:4000}
+    max-output-chars: ${APP_GUARDRAILS_MAX_OUTPUT_CHARS:8000}
+    requests-per-minute-per-org: ${APP_GUARDRAILS_REQUESTS_PER_MINUTE_PER_ORG:60}

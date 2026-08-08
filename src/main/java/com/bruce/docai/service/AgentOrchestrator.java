@@ -34,17 +34,20 @@ public class AgentOrchestrator {
     private final ChatService chatService;
     private final RagSearchTool ragSearchTool;
     private final ConversationMemoryService conversationMemoryService;
+    private final GuardrailService guardrailService;
     private final ChatClient chatClient;
 
     public AgentOrchestrator(AgentConfigService agentConfigService,
                              ChatService chatService,
                              RagSearchTool ragSearchTool,
                              ConversationMemoryService conversationMemoryService,
+                             GuardrailService guardrailService,
                              ChatClient.Builder chatClientBuilder) {
         this.agentConfigService = agentConfigService;
         this.chatService = chatService;
         this.ragSearchTool = ragSearchTool;
         this.conversationMemoryService = conversationMemoryService;
+        this.guardrailService = guardrailService;
         this.chatClient = chatClientBuilder.build();
     }
 
@@ -59,16 +62,24 @@ public class AgentOrchestrator {
             return "The assistant is currently unavailable. Please try again later.";
         }
 
+        String input;
+        try {
+            input = guardrailService.enforceInbound(request.organizationId(), request.text());
+        } catch (GuardrailException ex) {
+            return ex.getMessage();
+        }
+
         log.info("Handling chat via channel={} org={} mode={}",
                 request.channel(), request.organizationId(), config.mode());
 
-        return switch (config.mode()) {
-            case SIMPLE_RAG -> chatService.getKnownInfo(request.text(), request.organizationId());
-            case AGENTIC -> handleAgentic(request, config);
+        String reply = switch (config.mode()) {
+            case SIMPLE_RAG -> chatService.getKnownInfo(input, request.organizationId());
+            case AGENTIC -> handleAgentic(request, config, input);
         };
+        return guardrailService.enforceOutbound(reply);
     }
 
-    private String handleAgentic(ChatRequest request, AgentConfig config) {
+    private String handleAgentic(ChatRequest request, AgentConfig config, String input) {
         Conversation conversation = conversationMemoryService.resolve(request);
         List<Message> history = conversationMemoryService.loadHistory(conversation.id());
 
@@ -80,7 +91,7 @@ public class AgentOrchestrator {
         if (!history.isEmpty()) {
             spec = spec.messages(history);
         }
-        spec = spec.user(request.text());
+        spec = spec.user(input);
 
         spec = spec.tools(ragSearchTool)
                 .toolContext(Map.of(RagSearchTool.ORGANIZATION_ID_KEY, request.organizationId()));
@@ -95,7 +106,7 @@ public class AgentOrchestrator {
                 ? "I don't have enough information to answer that question."
                 : content.strip();
 
-        conversationMemoryService.record(conversation, request.text(), reply);
+        conversationMemoryService.record(conversation, input, reply);
         return reply;
     }
 
