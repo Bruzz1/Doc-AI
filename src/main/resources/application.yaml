@@ -94,3 +94,9 @@ app:
     min-chunk-size-chars: 150
     min-chunk-length-to-embed: 150
     max-num-chunks: 300
+  whatsapp:
+    verify-token: ${APP_WHATSAPP_VERIFY_TOKEN:}
+    app-secret: ${APP_WHATSAPP_APP_SECRET:}
+    access-token: ${APP_WHATSAPP_ACCESS_TOKEN:}
+    api-base-url: ${APP_WHATSAPP_API_BASE_URL:https://graph.facebook.com/v20.0}
+    default-organization-id: ${APP_WHATSAPP_DEFAULT_ORG_ID:}

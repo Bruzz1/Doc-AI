@@ -39,9 +39,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/login", "/accept-invite", "/error").permitAll()
-                        .requestMatchers("/style.css", "/favicon.ico").permitAll()
+                        .requestMatchers("/style.css", "/favicon.ico", "/widget.js").permitAll()
                         .requestMatchers("/auth/login", "/auth/refresh", "/auth/logout", "/auth/accept-invite").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/widget/**", "/webhook/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception.authenticationEntryPoint((request, response, ex) -> {

@@ -21,6 +21,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class AsyncConfig {
 
     public static final String DOCUMENT_INGEST_EXECUTOR = "docIngestExecutor";
+    public static final String WHATSAPP_EXECUTOR = "whatsappExecutor";
 
     @Value("${app.ingest.core-pool-size:2}")
     private int corePoolSize;
@@ -43,6 +44,25 @@ public class AsyncConfig {
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(60);
+        executor.initialize();
+        return executor;
+    }
+
+    /**
+     * Handles inbound WhatsApp messages off the webhook thread so the endpoint can
+     * acknowledge with 200 immediately (WhatsApp retries if the ack is slow) while the
+     * LLM call and outbound reply happen asynchronously.
+     */
+    @Bean(name = WHATSAPP_EXECUTOR)
+    public Executor whatsappExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("whatsapp-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
         executor.initialize();
         return executor;
     }
