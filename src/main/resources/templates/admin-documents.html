@@ -58,15 +58,30 @@ function formatSize(size) { return size < 1024 ? `${size} B` : `${(size / 1024 /
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function showStatus(message, type = '') { statusEl.textContent = message; statusEl.className = type; }
 
+let pollTimer = null;
+const STATUS_LABELS = { PENDING: 'Queued', PROCESSING: 'Processing…', INDEXED: 'Indexed', FAILED: 'Failed' };
+function statusCell(doc) {
+    const label = STATUS_LABELS[doc.status] || doc.status || 'Indexed';
+    if (doc.status === 'FAILED' && doc.errorMessage) {
+        return `<span title="${escapeHtml(doc.errorMessage)}">${escapeHtml(label)}</span>`;
+    }
+    return escapeHtml(label);
+}
+
 async function loadDocuments() {
     const response = await request('/admin/documents');
     if (!response.ok) { documentsEl.textContent = 'Unable to load documents.'; return; }
     const docs = await response.json();
     if (!docs.length) { documentsEl.textContent = 'No documents have been loaded yet.'; return; }
-    documentsEl.innerHTML = `<table><thead><tr><th>File</th><th>Type</th><th>Size</th><th>Chunks</th><th>Added</th><th></th></tr></thead><tbody>${docs.map(doc => `
+    documentsEl.innerHTML = `<table><thead><tr><th>File</th><th>Type</th><th>Size</th><th>Chunks</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>${docs.map(doc => `
         <tr><td>${escapeHtml(doc.filename)}</td><td>${escapeHtml(doc.contentType || doc.extension)}</td>
-        <td>${formatSize(doc.size)}</td><td>${doc.chunkCount}</td><td>${new Date(doc.createdAt).toLocaleString()}</td>
+        <td>${formatSize(doc.size)}</td><td>${doc.chunkCount}</td><td>${statusCell(doc)}</td><td>${new Date(doc.createdAt).toLocaleString()}</td>
         <td><button class="danger" onclick="removeDocument('${doc.id}')">Remove</button></td></tr>`).join('')}</tbody></table>`;
+
+    // Auto-refresh while any document is still being ingested.
+    const inFlight = docs.some(doc => doc.status === 'PENDING' || doc.status === 'PROCESSING');
+    if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+    if (inFlight) { pollTimer = setTimeout(() => loadDocuments().catch(() => {}), 2500); }
 }
 async function removeDocument(id) {
     if (!confirm('Remove this document from the RAG knowledge base?')) return;
@@ -82,7 +97,7 @@ document.getElementById('upload-form').addEventListener('submit', async event =>
     try {
         const response = await request('/admin/documents', { method: 'POST', body });
         if (!response.ok) { showStatus(await response.text(), 'error'); return; }
-        document.getElementById('upload-form').reset(); showStatus('Document added successfully.', 'success'); await loadDocuments();
+        document.getElementById('upload-form').reset(); showStatus('Upload accepted. Indexing in the background…', 'success'); await loadDocuments();
     } catch (error) { showStatus('Unable to reach the server.', 'error'); }
     finally { uploadBtn.disabled = false; }
 });

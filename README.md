@@ -197,16 +197,29 @@ Supported files are PDF, DOC, DOCX, and TXT. Uploads are limited to 20 MB by
 The upload pipeline is:
 
 1. Validate the file extension and detected MIME type.
-2. Calculate a SHA-256 checksum and reject duplicates within the organization.
-3. Extract text with Apache Tika.
-4. Normalize whitespace and line endings.
-5. Split the text into chunks.
-6. Generate embeddings with Ollama.
-7. Store chunks, metadata, and embeddings in pgvector.
-8. Save the chunk count in `rag_documents`.
+2. Stream the upload to a temp file, computing its SHA-256 checksum in the same
+   pass, and reject duplicates within the organization.
+3. Record a `PENDING` document row and return `202 Accepted` immediately.
+4. A bounded background worker pool then, off the request thread:
+   1. Marks the document `PROCESSING`.
+   2. Extracts text with Apache Tika.
+   3. Normalizes whitespace and line endings.
+   4. Splits the text into chunks.
+   5. Generates embeddings with Ollama.
+   6. Stores chunks, metadata, and embeddings in pgvector.
+   7. Marks the document `INDEXED` and saves the chunk count in `rag_documents`.
 
-If indexing fails, the service removes both the document record and any vectors
-created for that upload.
+The document dashboard polls and reflects each state (`PENDING`, `PROCESSING`,
+`INDEXED`, `FAILED`). If indexing fails, the service marks the document `FAILED`
+with an error message and removes any vectors created for that upload.
+
+Ingestion concurrency is bounded by `app.ingest.*` (core/max pool size, queue
+capacity), which also caps how many DB connections are held during embedding.
+
+Pipeline metrics are exported via Micrometer on the Actuator `/actuator/metrics`
+and `/actuator/prometheus` endpoints: `docai.document.uploads.accepted`,
+`docai.document.ingest.completed{outcome}`, `docai.document.ingest.duration`, and
+`docai.document.chunks`.
 
 
 ## Chat and RAG API

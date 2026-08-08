@@ -47,10 +47,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: "health,info"
+        include: "health,info,metrics,prometheus"
   info:
     env:
       enabled: true
+  metrics:
+    tags:
+      application: docai
 
 info:
   app:
@@ -61,6 +64,10 @@ app:
   tenant:
     rls-enabled: ${APP_TENANT_RLS_ENABLED:false}
     default-max-documents: ${APP_TENANT_DEFAULT_MAX_DOCUMENTS:0}
+  ingest:
+    core-pool-size: ${APP_INGEST_CORE_POOL_SIZE:2}
+    max-pool-size: ${APP_INGEST_MAX_POOL_SIZE:4}
+    queue-capacity: ${APP_INGEST_QUEUE_CAPACITY:50}
   security:
     jwt:
       secret: ${APP_SECURITY_JWT_SECRET:replace-this-with-a-long-random-secret-at-least-32-characters}

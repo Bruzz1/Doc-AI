@@ -11,7 +11,10 @@ public record RagDocument(
         String contentType,
         long size,
         int chunkCount,
-        Instant createdAt
+        DocumentStatus status,
+        String errorMessage,
+        Instant createdAt,
+        Instant updatedAt
 ) {
 }
 

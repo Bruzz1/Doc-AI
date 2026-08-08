@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class TikaDocumentParserServiceImpl implements DocumentService{
 
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("pdf", "doc", "docx", "txt");
+    private static final Set<String> ALLOWED_EXTENSIONS = com.bruce.docai.service.DocumentService.ALLOWED_EXTENSIONS;
     private static final Set<MediaType> ALLOWED_MEDIA_TYPES = Set.of(
             MediaType.application("pdf"),
             MediaType.application("msword"),
@@ -69,6 +69,17 @@ public class TikaDocumentParserServiceImpl implements DocumentService{
 
         ingest(file.getOriginalFilename(), file.getContentType(), file.getSize(), file.getInputStream(),
                 organizationId, documentId);
+    }
+
+    @Override
+    public void processFile(java.nio.file.Path source, String filename, String contentType, long size,
+                            String organizationId, UUID documentId) throws IOException {
+        if (source == null || !java.nio.file.Files.exists(source)) {
+            throw new IllegalArgumentException("File is empty. Allowed types: pdf, doc, docx, txt.");
+        }
+        try (InputStream inputStream = java.nio.file.Files.newInputStream(source)) {
+            ingest(filename, contentType, size, inputStream, organizationId, documentId);
+        }
     }
 
     @Override

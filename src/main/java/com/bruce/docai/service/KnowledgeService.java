@@ -1,18 +1,26 @@
 package com.bruce.docai.service;
 
+import com.bruce.docai.metrics.DocumentMetrics;
+import com.bruce.docai.model.DocumentStatus;
 import com.bruce.docai.model.Organization;
 import com.bruce.docai.model.RagDocument;
 import com.bruce.docai.repository.RagDocumentRepository;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
@@ -26,9 +34,11 @@ public class KnowledgeService {
     private final JdbcClient jdbcClient;
     private final VectorStore vectorStore;
 
-    private final DocumentService documentService;
+    private final DocumentIngestionService ingestionService;
     private final TenantService tenantService;
     private final AuditService auditService;
+    private final DocumentMetrics documentMetrics;
+    private final TransactionTemplate transactionTemplate;
 
     @Value("${app.tenant.default-max-documents:0}")
     private int defaultMaxDocuments;
@@ -37,65 +47,71 @@ public class KnowledgeService {
     private boolean rlsEnabled;
 
     public KnowledgeService(RagDocumentRepository documentRepository,
-                             JdbcClient jdbcClient,
-                             VectorStore vectorStore,
-                             @Qualifier("tika-parser") DocumentService documentService,
-                             TenantService tenantService,
-                             AuditService auditService) {
+                            JdbcClient jdbcClient,
+                            VectorStore vectorStore,
+                            DocumentIngestionService ingestionService,
+                            TenantService tenantService,
+                            AuditService auditService,
+                            DocumentMetrics documentMetrics,
+                            PlatformTransactionManager transactionManager) {
         this.documentRepository = documentRepository;
         this.jdbcClient = jdbcClient;
         this.vectorStore = vectorStore;
-        this.documentService = documentService;
+        this.ingestionService = ingestionService;
         this.tenantService = tenantService;
         this.auditService = auditService;
+        this.documentMetrics = documentMetrics;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     public List<RagDocument> list(String organizationId) {
         return documentRepository.findAllByOrganizationId(requireOrganization(organizationId));
     }
 
-    @Transactional
+    /**
+     * Accepts an upload, persists it to a temp file (computing its checksum in the
+     * same pass), records a PENDING document row, and hands parsing/embedding to
+     * the asynchronous ingestion worker. Returns immediately; callers should poll
+     * the document status for completion.
+     */
     public RagDocument add(MultipartFile file, String organizationId, String actor) throws IOException {
         String resolvedOrganization = requireOrganization(organizationId);
         Organization organization = tenantService.requireActive(resolvedOrganization);
-        bindTenantForRls(resolvedOrganization);
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File is empty. Allowed types: pdf, doc, docx, txt.");
         }
-
+        String extension = extension(file.getOriginalFilename());
+        if (!DocumentService.ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("Unsupported file '" + safeFilename(file.getOriginalFilename())
+                    + "'. Allowed types: pdf, doc, docx, txt.");
+        }
         enforceDocumentQuota(organization, resolvedOrganization);
 
-        String checksum = checksum(file.getBytes());
-        if (documentRepository.existsByChecksum(resolvedOrganization, checksum)) {
-            throw new IllegalArgumentException("This document has already been loaded.");
-        }
-
-        UUID id = UUID.randomUUID();
-        RagDocument document = new RagDocument(id, resolvedOrganization, safeFilename(file.getOriginalFilename()),
-                extension(file.getOriginalFilename()), file.getContentType(), file.getSize(), 0, null);
-        documentRepository.insert(document, checksum);
-
+        Path temp = Files.createTempFile("docai-upload-", ".bin");
+        boolean handedOff = false;
         try {
-            documentService.processFile(file, resolvedOrganization, id);
+            String checksum = streamToTempFile(file, temp);
+            if (documentRepository.existsByChecksum(resolvedOrganization, checksum)) {
+                throw new IllegalArgumentException("This document has already been loaded.");
+            }
 
-            int chunkCount = jdbcClient.sql("""
-                    SELECT COUNT(*) FROM vector_store
-                    WHERE metadata ->> 'documentId' = :documentId
-                      AND metadata ->> 'organizationId' = :organizationId
-                    """)
-                    .param("documentId", id.toString())
-                    .param("organizationId", resolvedOrganization)
-                    .query(Integer.class)
-                    .single();
-            documentRepository.updateChunkCount(id, chunkCount);
-            RagDocument saved = documentRepository.findByIdAndOrganizationId(id, resolvedOrganization).orElseThrow();
-            auditService.record(resolvedOrganization, actor, "DOCUMENT_UPLOAD", saved.filename(),
-                    "id=" + id + ", chunks=" + chunkCount);
-            return saved;
-        } catch (RuntimeException | IOException ex) {
-            deleteVectors(id, resolvedOrganization);
-            documentRepository.delete(id, resolvedOrganization);
-            throw ex;
+            UUID id = UUID.randomUUID();
+            String filename = safeFilename(file.getOriginalFilename());
+            RagDocument document = new RagDocument(id, resolvedOrganization, filename,
+                    extension, file.getContentType(), file.getSize(), 0,
+                    DocumentStatus.PENDING, null, null, null);
+
+            registerPending(resolvedOrganization, document, checksum);
+            auditService.record(resolvedOrganization, actor, "DOCUMENT_UPLOAD", filename, "id=" + id + ", status=PENDING");
+            documentMetrics.recordUploadAccepted();
+
+            ingestionService.ingestAsync(temp, filename, file.getContentType(), file.getSize(), resolvedOrganization, id);
+            handedOff = true;
+            return document;
+        } finally {
+            if (!handedOff) {
+                deleteQuietly(temp);
+            }
         }
     }
 
@@ -110,7 +126,29 @@ public class KnowledgeService {
         auditService.record(resolvedOrganization, actor, "DOCUMENT_DELETE", document.filename(), "id=" + id);
     }
 
-    private void enforceDocumentQuota(Organization organization, String organizationId) {        Integer limit = organization.getMaxDocuments() != null
+    /**
+     * Inserts the PENDING metadata row in its own short transaction so the RLS
+     * tenant binding (when enabled) is scoped to the same connection as the write.
+     */
+    private void registerPending(String organizationId, RagDocument document, String checksum) {
+        transactionTemplate.executeWithoutResult(status -> {
+            bindTenantForRls(organizationId);
+            documentRepository.insert(document, checksum);
+        });
+    }
+
+    private String streamToTempFile(MultipartFile file, Path target) throws IOException {
+        MessageDigest digest = newSha256();
+        try (InputStream in = file.getInputStream();
+             DigestInputStream digestStream = new DigestInputStream(in, digest);
+             OutputStream out = Files.newOutputStream(target)) {
+            digestStream.transferTo(out);
+        }
+        return HexFormat.of().formatHex(digest.digest());
+    }
+
+    private void enforceDocumentQuota(Organization organization, String organizationId) {
+        Integer limit = organization.getMaxDocuments() != null
                 ? organization.getMaxDocuments()
                 : (defaultMaxDocuments > 0 ? defaultMaxDocuments : null);
         if (limit == null) {
@@ -147,19 +185,27 @@ public class KnowledgeService {
                 .optional();
     }
 
+    private void deleteQuietly(Path path) {
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException ignored) {
+            // Temp file cleanup is best effort.
+        }
+    }
+
+    private MessageDigest newSha256() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 is unavailable.", ex);
+        }
+    }
+
     private String requireOrganization(String organizationId) {
         if (organizationId == null || organizationId.isBlank()) {
             throw new IllegalArgumentException("Your account is not assigned to an organization.");
         }
         return organizationId;
-    }
-
-    private String checksum(byte[] bytes) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 is unavailable.", ex);
-        }
     }
 
     private String safeFilename(String filename) {
@@ -173,6 +219,3 @@ public class KnowledgeService {
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(java.util.Locale.ROOT);
     }
 }
-
-
-

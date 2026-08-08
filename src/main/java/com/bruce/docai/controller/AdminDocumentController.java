@@ -38,7 +38,7 @@ public class AdminDocumentController {
     @PostMapping
     public ResponseEntity<RagDocument> add(@RequestParam("file") MultipartFile file, Authentication authentication) throws IOException {
         User user = (User) authentication.getPrincipal();
-        return ResponseEntity.status(HttpStatus.CREATED)
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(knowledgeService.add(file, user.getOrganizationId(), user.getEmail()));
     }
 
