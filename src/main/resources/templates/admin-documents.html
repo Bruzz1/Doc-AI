@@ -3,107 +3,320 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Manage Documents - Admin</title>
+    <title>Manage Documents · Doc-AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-        body { margin: 0; background: #f3f5fb; color: #1e293b; font-family: Inter, Arial, sans-serif; }
-        .container { max-width: 1000px; margin: auto; padding: 24px; }
-        .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-top: 20px; }
-        h1, h2 { margin-top: 0; }
-        .back { color: #1d4ed8; text-decoration: none; }
-        form { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-        button { border: 0; border-radius: 7px; padding: 10px 15px; font-weight: 600; cursor: pointer; }
-        button.primary { color: white; background: #1d4ed8; }
-        button.danger { color: #b91c1c; background: #fee2e2; }
-        button:disabled { opacity: .6; cursor: not-allowed; }
-        #status { min-height: 20px; margin: 14px 0; }
-        .error { color: #b91c1c; } .success { color: #166534; }
+        :root {
+            --bg:        #f8fafc;
+            --surface:   #ffffff;
+            --border:    #e2e8f0;
+            --text:      #0f172a;
+            --muted:     #64748b;
+            --primary:   #2563eb;
+            --primary-dark: #1d4ed8;
+            --danger:    #dc2626;
+            --danger-bg: #fef2f2;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px rgba(15, 23, 42, .04), 0 1px 3px rgba(15, 23, 42, .06);
+            --shadow-md: 0 4px 12px rgba(15, 23, 42, .06), 0 2px 4px rgba(15, 23, 42, .04);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background: var(--bg); color: var(--text); line-height: 1.5; }
+        a { text-decoration: none; color: inherit; }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+
+        /* Header */
+        .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+        .back {
+            display: inline-flex; align-items: center; gap: 6px; color: var(--muted);
+            font-size: .875rem; font-weight: 500; margin-bottom: 18px; transition: color .15s;
+        }
+        .back:hover { color: var(--primary); }
+        .page-title { display: flex; align-items: center; gap: 12px; }
+        .page-title .icon {
+            display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0;
+            background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+        h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; }
+        .subtitle { color: var(--muted); font-size: .9rem; margin-top: 2px; }
+
+        /* Cards */
+        .card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            padding: 24px; margin-top: 24px; box-shadow: var(--shadow-sm);
+        }
+        .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+        .card-head h2 { font-size: 1.05rem; font-weight: 600; }
+        .count-pill {
+            font-size: .78rem; font-weight: 600; color: var(--muted);
+            background: var(--bg); border: 1px solid var(--border); padding: 3px 10px; border-radius: 999px;
+        }
+
+        /* Dropzone */
+        .dropzone {
+            border: 2px dashed #cbd5e1; border-radius: var(--radius-md); padding: 32px 20px; text-align: center;
+            cursor: pointer; transition: border-color .15s, background .15s;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .dropzone:hover, .dropzone.dragover { border-color: var(--primary); background: #eff6ff; }
+        .dropzone .dz-icon { color: #94a3b8; transition: color .15s; }
+        .dropzone:hover .dz-icon, .dropzone.dragover .dz-icon { color: var(--primary); }
+        .dropzone .dz-title { font-weight: 600; font-size: .95rem; }
+        .dropzone .dz-title span { color: var(--primary); }
+        .dropzone .dz-hint { color: var(--muted); font-size: .8rem; }
+        .dropzone.has-file { border-style: solid; border-color: var(--primary); background: #eff6ff; }
+        input[type=file] { display: none; }
+
+        .upload-bar { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+        .file-chip {
+            flex: 1; min-width: 0; display: none; align-items: center; gap: 8px;
+            background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            padding: 8px 12px; font-size: .85rem;
+        }
+        .file-chip.show { display: flex; }
+        .file-chip .fname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+        .file-chip .fsize { color: var(--muted); flex-shrink: 0; }
+
+        button {
+            border: 0; border-radius: var(--radius-sm); padding: 10px 18px; font-weight: 600; font-size: .875rem;
+            cursor: pointer; transition: background .15s, opacity .15s, transform .05s; display: inline-flex;
+            align-items: center; gap: 7px;
+        }
+        button:active { transform: translateY(1px); }
+        button.primary { color: #fff; background: var(--primary); box-shadow: var(--shadow-sm); }
+        button.primary:hover { background: var(--primary-dark); }
+        button:disabled { opacity: .55; cursor: not-allowed; }
+        button.icon-btn {
+            padding: 7px 12px; color: var(--danger); background: transparent; border: 1px solid var(--border);
+        }
+        button.icon-btn:hover { background: var(--danger-bg); border-color: #fecaca; }
+
+        #status { min-height: 22px; margin-top: 14px; font-size: .875rem; }
+        #status.error { color: var(--danger); } #status.success { color: #15803d; }
+
+        /* Table */
+        .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 13px 8px; border-bottom: 1px solid #e2e8f0; }
-        th { color: #64748b; font-size: .85rem; }
-        @media (max-width: 700px) { table, thead, tbody, tr, th, td { display: block; } th { display: none; } td { border: 0; padding: 6px 0; } tr { border-bottom: 1px solid #e2e8f0; padding: 12px 0; } }
+        th, td { text-align: left; padding: 14px 12px; }
+        thead th {
+            color: var(--muted); font-size: .72rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: .04em; border-bottom: 1px solid var(--border);
+        }
+        tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
+        tbody tr:last-child { border-bottom: 0; }
+        tbody tr:hover { background: #f8fafc; }
+        .doc-name { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+        .doc-name .file-ico { color: #94a3b8; flex-shrink: 0; }
+        .muted { color: var(--muted); }
+
+        /* Status badges */
+        .badge {
+            display: inline-flex; align-items: center; gap: 6px; font-size: .76rem; font-weight: 600;
+            padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+        }
+        .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        .badge.indexed    { color: #15803d; background: #f0fdf4; }
+        .badge.processing { color: #b45309; background: #fffbeb; }
+        .badge.pending    { color: #475569; background: #f1f5f9; }
+        .badge.failed     { color: var(--danger); background: var(--danger-bg); }
+        .badge.processing::before { animation: pulse 1s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+        /* Empty / loading states */
+        .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+        .empty .empty-ico { color: #cbd5e1; margin-bottom: 10px; }
+        .empty .empty-title { font-weight: 600; color: var(--text); }
+        .empty .empty-sub { font-size: .85rem; margin-top: 4px; }
+        .skeleton { height: 48px; border-radius: var(--radius-sm); background: linear-gradient(90deg,#f1f5f9 25%,#e9eef5 37%,#f1f5f9 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; margin-bottom: 8px; }
+        @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+        @media (max-width: 680px) {
+            thead { display: none; }
+            tbody tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 14px 0; }
+            td { padding: 2px 0; }
+            td[data-label]::before { content: attr(data-label) ': '; color: var(--muted); font-size: .72rem; font-weight: 600; }
+            td.actions { grid-column: 2; grid-row: 1 / span 3; align-self: start; }
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <a class="back" href="/app">← Back to app</a>
-    <h1>Manage RAG Documents</h1>
-    <p>Files listed here are available to your organization’s knowledge assistant.</p>
+    <a class="back" href="/app">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to app
+    </a>
+
+    <div class="page-head">
+        <div class="page-title">
+            <span class="icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </span>
+            <div>
+                <h1>Manage Documents</h1>
+                <div class="subtitle">Files here power your organization’s knowledge assistant.</div>
+            </div>
+        </div>
+    </div>
 
     <section class="card">
-        <h2>Add document</h2>
+        <div class="card-head"><h2>Add a document</h2></div>
         <form id="upload-form">
+            <label class="dropzone" id="dropzone" for="file">
+                <svg class="dz-icon" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <div class="dz-title">Drop a file here or <span>browse</span></div>
+                <div class="dz-hint">PDF, DOC, DOCX or TXT · up to 20 MB</div>
+            </label>
             <input id="file" type="file" accept=".pdf,.doc,.docx,.txt" required>
-            <button class="primary" id="upload" type="submit">Add to knowledge base</button>
+
+            <div class="upload-bar">
+                <div class="file-chip" id="file-chip">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span class="fname" id="chip-name"></span>
+                    <span class="fsize" id="chip-size"></span>
+                </div>
+                <button class="primary" id="upload" type="submit">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add to knowledge base
+                </button>
+            </div>
         </form>
         <div id="status" aria-live="polite"></div>
     </section>
 
     <section class="card">
-        <h2>Loaded files</h2>
-        <div id="documents">Loading…</div>
+        <div class="card-head">
+            <h2>Loaded files</h2>
+            <span class="count-pill" id="count-pill" style="display:none;"></span>
+        </div>
+        <div id="documents">
+            <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        </div>
     </section>
 </div>
+
 <script>
 'use strict';
-const statusEl = document.getElementById('status');
-const documentsEl = document.getElementById('documents');
-const uploadBtn = document.getElementById('upload');
+const $ = id => document.getElementById(id);
+const statusEl = $('status');
+const documentsEl = $('documents');
+const uploadBtn = $('upload');
+const fileInput = $('file');
+const dropzone = $('dropzone');
+const fileChip = $('file-chip');
+const countPill = $('count-pill');
 
 async function request(url, options = {}) {
     const response = await fetch(url, { credentials: 'same-origin', ...options });
     if (response.status === 401) { window.location.href = '/login'; throw new Error('Unauthorized'); }
     return response;
 }
-function formatSize(size) { return size < 1024 ? `${size} B` : `${(size / 1024 / 1024).toFixed(2)} MB`; }
+function formatSize(size) {
+    if (size == null) return '';
+    return size < 1024 * 1024 ? `${(size / 1024).toFixed(1)} KB` : `${(size / 1024 / 1024).toFixed(2)} MB`;
+}
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function showStatus(message, type = '') { statusEl.textContent = message; statusEl.className = type; }
 
+/* ── Dropzone interactions ─────────────────────────────── */
+function reflectSelection() {
+    const file = fileInput.files[0];
+    if (!file) { fileChip.classList.remove('show'); dropzone.classList.remove('has-file'); return; }
+    $('chip-name').textContent = file.name;
+    $('chip-size').textContent = formatSize(file.size);
+    fileChip.classList.add('show');
+    dropzone.classList.add('has-file');
+}
+fileInput.addEventListener('change', reflectSelection);
+['dragenter', 'dragover'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
+dropzone.addEventListener('drop', e => {
+    if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; reflectSelection(); }
+});
+
+/* ── Documents table ───────────────────────────────────── */
 let pollTimer = null;
-const STATUS_LABELS = { PENDING: 'Queued', PROCESSING: 'Processing…', INDEXED: 'Indexed', FAILED: 'Failed' };
-function statusCell(doc) {
-    const label = STATUS_LABELS[doc.status] || doc.status || 'Indexed';
-    if (doc.status === 'FAILED' && doc.errorMessage) {
-        return `<span title="${escapeHtml(doc.errorMessage)}">${escapeHtml(label)}</span>`;
-    }
-    return escapeHtml(label);
+const STATUS_META = {
+    PENDING:    { label: 'Queued',      cls: 'pending' },
+    PROCESSING: { label: 'Processing',  cls: 'processing' },
+    INDEXED:    { label: 'Indexed',     cls: 'indexed' },
+    FAILED:     { label: 'Failed',      cls: 'failed' },
+};
+function statusBadge(doc) {
+    const meta = STATUS_META[doc.status] || STATUS_META.INDEXED;
+    const title = (doc.status === 'FAILED' && doc.errorMessage) ? ` title="${escapeHtml(doc.errorMessage)}"` : '';
+    return `<span class="badge ${meta.cls}"${title}>${escapeHtml(meta.label)}</span>`;
+}
+function emptyState() {
+    return `<div class="empty">
+        <svg class="empty-ico" width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <div class="empty-title">No documents yet</div>
+        <div class="empty-sub">Upload a file above to build your knowledge base.</div>
+    </div>`;
 }
 
 async function loadDocuments() {
     const response = await request('/admin/documents');
-    if (!response.ok) { documentsEl.textContent = 'Unable to load documents.'; return; }
+    if (!response.ok) { documentsEl.innerHTML = emptyState(); countPill.style.display = 'none'; return; }
     const docs = await response.json();
-    if (!docs.length) { documentsEl.textContent = 'No documents have been loaded yet.'; return; }
-    documentsEl.innerHTML = `<table><thead><tr><th>File</th><th>Type</th><th>Size</th><th>Chunks</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>${docs.map(doc => `
-        <tr><td>${escapeHtml(doc.filename)}</td><td>${escapeHtml(doc.contentType || doc.extension)}</td>
-        <td>${formatSize(doc.size)}</td><td>${doc.chunkCount}</td><td>${statusCell(doc)}</td><td>${new Date(doc.createdAt).toLocaleString()}</td>
-        <td><button class="danger" onclick="removeDocument('${doc.id}')">Remove</button></td></tr>`).join('')}</tbody></table>`;
 
-    // Auto-refresh while any document is still being ingested.
+    countPill.style.display = docs.length ? 'inline-flex' : 'none';
+    countPill.textContent = `${docs.length} file${docs.length === 1 ? '' : 's'}`;
+
+    if (!docs.length) { documentsEl.innerHTML = emptyState(); return; }
+
+    documentsEl.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Type</th><th>Size</th><th>Chunks</th><th>Status</th><th>Added</th><th></th></tr></thead>
+        <tbody>${docs.map(doc => `
+            <tr>
+                <td data-label="File"><div class="doc-name">
+                    <svg class="file-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    ${escapeHtml(doc.filename)}
+                </div></td>
+                <td data-label="Type" class="muted">${escapeHtml(doc.contentType || doc.extension || '—')}</td>
+                <td data-label="Size" class="muted">${formatSize(doc.size)}</td>
+                <td data-label="Chunks" class="muted">${doc.chunkCount ?? '—'}</td>
+                <td data-label="Status">${statusBadge(doc)}</td>
+                <td data-label="Added" class="muted">${doc.createdAt ? new Date(doc.createdAt).toLocaleString() : '—'}</td>
+                <td class="actions"><button class="icon-btn" onclick="removeDocument('${doc.id}')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Remove
+                </button></td>
+            </tr>`).join('')}</tbody></table></div>`;
+
     const inFlight = docs.some(doc => doc.status === 'PENDING' || doc.status === 'PROCESSING');
     if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
     if (inFlight) { pollTimer = setTimeout(() => loadDocuments().catch(() => {}), 2500); }
 }
+
 async function removeDocument(id) {
-    if (!confirm('Remove this document from the RAG knowledge base?')) return;
+    if (!confirm('Remove this document from the knowledge base?')) return;
     const response = await request(`/admin/documents/${id}`, { method: 'DELETE' });
     if (!response.ok) { showStatus(await response.text(), 'error'); return; }
     showStatus('Document removed.', 'success'); await loadDocuments();
 }
-document.getElementById('upload-form').addEventListener('submit', async event => {
+
+$('upload-form').addEventListener('submit', async event => {
     event.preventDefault();
-    const file = document.getElementById('file').files[0]; if (!file) return;
-    uploadBtn.disabled = true; showStatus('Adding document…');
+    const file = fileInput.files[0]; if (!file) { showStatus('Please choose a file first.', 'error'); return; }
+    uploadBtn.disabled = true; showStatus('Uploading…');
     const body = new FormData(); body.append('file', file);
     try {
         const response = await request('/admin/documents', { method: 'POST', body });
         if (!response.ok) { showStatus(await response.text(), 'error'); return; }
-        document.getElementById('upload-form').reset(); showStatus('Upload accepted. Indexing in the background…', 'success'); await loadDocuments();
+        $('upload-form').reset(); reflectSelection();
+        showStatus('Upload accepted — indexing in the background…', 'success');
+        await loadDocuments();
     } catch (error) { showStatus('Unable to reach the server.', 'error'); }
     finally { uploadBtn.disabled = false; }
 });
-loadDocuments().catch(() => { documentsEl.textContent = 'Unable to load documents.'; });
+
+loadDocuments().catch(() => { documentsEl.innerHTML = emptyState(); });
 </script>
 </body>
 </html>
-
-
