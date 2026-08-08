@@ -28,7 +28,7 @@ class AgentOrchestratorTest {
 
     private AgentConfigService agentConfigService;
     private ChatService chatService;
-    private RagSearchTool ragSearchTool;
+    private ToolRegistry toolRegistry;
     private ConversationMemoryService memoryService;
     private GuardrailService guardrailService;
     private AgentOrchestrator orchestrator;
@@ -37,7 +37,7 @@ class AgentOrchestratorTest {
     void setUp() {
         agentConfigService = mock(AgentConfigService.class);
         chatService = mock(ChatService.class);
-        ragSearchTool = mock(RagSearchTool.class);
+        toolRegistry = mock(ToolRegistry.class);
         memoryService = mock(ConversationMemoryService.class);
         guardrailService = mock(GuardrailService.class);
 
@@ -52,12 +52,17 @@ class AgentOrchestratorTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         orchestrator = new AgentOrchestrator(
-                agentConfigService, chatService, ragSearchTool, memoryService, guardrailService, builder);
+                agentConfigService, chatService, toolRegistry, memoryService, guardrailService, builder);
     }
 
     private AgentConfig config(AgentMode mode, boolean enabled) {
         return new AgentConfig(UUID.randomUUID(), "org-1", "Default Agent", mode,
-                null, null, null, null, null, null, null, enabled, Instant.now(), Instant.now());
+                null, null, null, null, null, null, null, enabled, null, Instant.now(), Instant.now());
+    }
+
+    private AgentConfig config(AgentMode mode, boolean enabled, String disabledMessage) {
+        return new AgentConfig(UUID.randomUUID(), "org-1", "Default Agent", mode,
+                null, null, null, null, null, null, null, enabled, disabledMessage, Instant.now(), Instant.now());
     }
 
     @Test
@@ -85,6 +90,17 @@ class AgentOrchestratorTest {
     }
 
     @Test
+    void disabledAgentReturnsConfiguredMessageWhenPresent() {
+        when(agentConfigService.getForOrganization("org-1"))
+                .thenReturn(config(AgentMode.SIMPLE_RAG, false, "Offline for maintenance until 5 PM."));
+
+        String reply = orchestrator.handle(ChatRequest.of("org-1", Channel.WHATSAPP, "u", "hi"));
+
+        assertEquals("Offline for maintenance until 5 PM.", reply);
+        verify(chatService, never()).getKnownInfo(anyString(), anyString());
+    }
+
+    @Test
     void guardrailViolationShortCircuitsBeforeModel() {
         when(agentConfigService.getForOrganization("org-1")).thenReturn(config(AgentMode.SIMPLE_RAG, true));
         when(guardrailService.enforceInbound("org-1", "spam"))
@@ -99,6 +115,7 @@ class AgentOrchestratorTest {
     @Test
     void agenticModeResolvesConversationAndRecordsTurn() {
         when(agentConfigService.getForOrganization("org-1")).thenReturn(config(AgentMode.AGENTIC, true));
+        when(toolRegistry.resolve(any())).thenReturn(List.of());
         Conversation conversation = new Conversation(
                 UUID.randomUUID(), "org-1", Channel.WEB_ADMIN, "user-1", Instant.now(), Instant.now());
         when(memoryService.resolve(any(ChatRequest.class))).thenReturn(conversation);
@@ -109,6 +126,7 @@ class AgentOrchestratorTest {
         verify(memoryService).resolve(any(ChatRequest.class));
         verify(memoryService).loadHistory(conversation.id());
         verify(memoryService).record(eq(conversation), eq("hi there"), anyString());
+        verify(toolRegistry).resolve(any());
         verify(guardrailService).enforceOutbound(anyString());
         // SIMPLE_RAG path must not be used in AGENTIC mode.
         verify(chatService, never()).getKnownInfo(anyString(), anyString());

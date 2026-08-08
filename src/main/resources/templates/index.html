@@ -142,6 +142,14 @@
         <!-- Chat Input -->
         <footer class="chat-footer">
             <div class="chat-input">
+                <button id="new-chat-btn" type="button" aria-label="Start a new chat" title="New chat"
+                        style="display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid #cbd5e1;border-radius:8px;color:#475569;padding:0 12px;cursor:pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18M3 12h18M3 18h12"/>
+                        <path d="M18 15v6M15 18h6"/>
+                    </svg>
+                </button>
                 <input id="user-input" type="text"
                        placeholder="Ask a question…"
                        autocomplete="off"
@@ -177,6 +185,7 @@ const App = {
     chatMessages:  document.getElementById('chat-messages'),
     userInput:     document.getElementById('user-input'),
     sendBtn:       document.getElementById('send-btn'),
+    newChatBtn:    document.getElementById('new-chat-btn'),
     modeToggle:    document.getElementById('mode-toggle'),
     modeLabel:     document.getElementById('mode-label'),
     logoutBtn:     document.getElementById('logout-btn'),
@@ -373,8 +382,24 @@ const Chat = {
         }
     },
 
+    async newChat() {
+        App.newChatBtn.disabled = true;
+        try {
+            await Auth.apiFetch('/faqs/conversation', { method: 'DELETE' });
+            App.chatMessages.innerHTML =
+                '<div class="message message--ai">Started a new chat. How can I help?</div>';
+            this.scrollToBottom();
+        } catch {
+            this.appendMessage('Error: could not start a new chat.', 'ai');
+        } finally {
+            App.newChatBtn.disabled = false;
+            App.userInput.focus();
+        }
+    },
+
     init() {
         App.sendBtn.addEventListener('click',   () => this.send());
+        App.newChatBtn.addEventListener('click', () => this.newChat());
         App.userInput.addEventListener('keydown', e => { if (e.key === 'Enter') this.send(); });
         App.modeToggle.addEventListener('change', () => this.updateModeLabel());
         this.updateModeLabel();

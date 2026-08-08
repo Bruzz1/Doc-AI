@@ -10,8 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -32,11 +35,33 @@ public class ConversationMemoryService {
     private final ConversationRepository conversationRepository;
 
     /**
+     * Minutes of inactivity after which a returning user's conversation is treated as a
+     * fresh start (its prior messages are cleared). {@code 0} disables the timeout so
+     * conversations resume indefinitely.
+     */
+    @Value("${app.agent.conversation-idle-minutes:30}")
+    private long idleMinutes;
+
+    /**
      * Resolve (or create) the conversation for a request. An explicit
      * {@link ChatRequest#conversationId()} wins; otherwise the conversation is keyed
      * by {@code (organizationId, channel, userRef)}.
+     *
+     * <p>If the resolved conversation has been idle longer than
+     * {@code app.agent.conversation-idle-minutes}, its history is cleared so the next
+     * turn starts fresh — preventing stale context from bleeding across sessions.
      */
     public Conversation resolve(ChatRequest request) {
+        Conversation conversation = resolveRaw(request);
+        if (isIdle(conversation)) {
+            log.info("Conversation {} idle for over {} min; clearing history for a fresh start.",
+                    conversation.id(), idleMinutes);
+            conversationRepository.clearMessages(conversation.id());
+        }
+        return conversation;
+    }
+
+    private Conversation resolveRaw(ChatRequest request) {
         if (request.conversationId() != null && !request.conversationId().isBlank()) {
             UUID id = parseId(request.conversationId());
             if (id != null) {
@@ -45,6 +70,25 @@ public class ConversationMemoryService {
             }
         }
         return findOrCreate(request);
+    }
+
+    private boolean isIdle(Conversation conversation) {
+        if (idleMinutes <= 0 || conversation.lastActivityAt() == null) {
+            return false;
+        }
+        Duration inactivity = Duration.between(conversation.lastActivityAt(), Instant.now());
+        return inactivity.compareTo(Duration.ofMinutes(idleMinutes)) > 0;
+    }
+
+    /**
+     * Explicitly clear the conversation history for a request's
+     * {@code (organizationId, channel, userRef)} — the "new chat" reset.
+     */
+    public void reset(ChatRequest request) {
+        Conversation conversation = findOrCreate(request);
+        conversationRepository.clearMessages(conversation.id());
+        log.info("Reset conversation {} for org={} channel={}.",
+                conversation.id(), request.organizationId(), request.channel());
     }
 
     /**

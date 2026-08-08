@@ -71,15 +71,22 @@
                 </div>
 
                 <label for="enabledTools">Enabled tools
-                    <span class="hint">Comma-separated. Currently: searchKnowledgeBase.</span>
+                    <span class="hint">Comma-separated. Available: rag_search. Blank = all tools.</span>
                 </label>
-                <input id="enabledTools" type="text" placeholder="searchKnowledgeBase">
+                <input id="enabledTools" type="text" placeholder="rag_search">
             </fieldset>
 
             <div class="checkbox">
                 <input id="enabled" type="checkbox" checked>
                 <label for="enabled" style="margin:0;">Assistant enabled</label>
             </div>
+
+            <label for="disabledMessage">Disabled message
+                <span class="hint">Shown on every channel when the assistant is turned off.
+                    Blank uses the default message.</span>
+            </label>
+            <textarea id="disabledMessage" style="min-height:70px;"
+                      placeholder="The assistant is currently unavailable. Please try again later."></textarea>
 
             <div id="status" aria-live="polite"></div>
             <button class="primary" id="save" type="submit">Save configuration</button>
@@ -111,6 +118,7 @@ function populate(config) {
     $('temperature').value = config.temperature ?? '';
     $('enabledTools').value = config.enabledTools ?? '';
     $('enabled').checked = config.enabled !== false;
+    $('disabledMessage').value = config.disabledMessage ?? '';
     toggleAgentic();
 }
 
@@ -143,7 +151,8 @@ $('agent-form').addEventListener('submit', async (event) => {
         model: $('model').value.trim() || null,
         temperature: numberOrNull($('temperature').value),
         enabledTools: $('enabledTools').value.trim() || null,
-        enabled: $('enabled').checked
+        enabled: $('enabled').checked,
+        disabledMessage: $('disabledMessage').value.trim() || null
     };
 
     try {

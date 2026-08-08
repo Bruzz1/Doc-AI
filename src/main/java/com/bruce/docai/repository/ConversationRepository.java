@@ -80,6 +80,20 @@ public class ConversationRepository {
     }
 
     /**
+     * Remove all messages for a conversation while keeping the conversation row, and
+     * reset its activity clock. Used to start a fresh context (idle timeout or an
+     * explicit user "new chat") without violating the one-row-per-user unique index.
+     */
+    public void clearMessages(UUID conversationId) {
+        jdbcClient.sql("DELETE FROM messages WHERE conversation_id = :id")
+                .param("id", conversationId)
+                .update();
+        jdbcClient.sql("UPDATE conversations SET last_activity_at = CURRENT_TIMESTAMP WHERE id = :id")
+                .param("id", conversationId)
+                .update();
+    }
+
+    /**
      * Load up to {@code limit} most recent messages for a conversation, returned in
      * chronological (oldest-first) order for prompt construction.
      */

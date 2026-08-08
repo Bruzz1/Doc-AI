@@ -18,11 +18,19 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class RagSearchTool {
+public class RagSearchTool implements AgentTool {
 
     public static final String ORGANIZATION_ID_KEY = "organizationId";
 
+    /** Stable identifier used in {@code AgentConfig.enabledTools()}. */
+    public static final String TOOL_NAME = "rag_search";
+
     private final ChatService chatService;
+
+    @Override
+    public String name() {
+        return TOOL_NAME;
+    }
 
     @Tool(description = "Search the organization's private knowledge base (uploaded documents "
             + "and FAQs) for information relevant to the user's question. Call this whenever the "

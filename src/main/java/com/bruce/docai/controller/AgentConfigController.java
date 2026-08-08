@@ -53,6 +53,7 @@ public class AgentConfigController {
                 request.similarityThreshold(),
                 request.maxContextChars(),
                 request.enabled() == null ? true : request.enabled(),
+                trimToNull(request.disabledMessage()),
                 existing.createdAt(),
                 existing.updatedAt());
 
@@ -96,6 +97,7 @@ public class AgentConfigController {
             Integer topK,
             Double similarityThreshold,
             Integer maxContextChars,
-            Boolean enabled) {
+            Boolean enabled,
+            String disabledMessage) {
     }
 }

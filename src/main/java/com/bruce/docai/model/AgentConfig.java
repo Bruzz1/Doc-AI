@@ -25,6 +25,7 @@ public record AgentConfig(
         Double similarityThreshold,
         Integer maxContextChars,
         boolean enabled,
+        String disabledMessage,
         Instant createdAt,
         Instant updatedAt
 ) {

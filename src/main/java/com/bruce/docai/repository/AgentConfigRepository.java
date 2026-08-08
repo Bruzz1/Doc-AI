@@ -23,7 +23,7 @@ public class AgentConfigRepository {
     private static final String SELECT_COLUMNS = """
             SELECT id, organization_id, name, mode, system_prompt, model, temperature,
                    enabled_tools, top_k, similarity_threshold, max_context_chars,
-                   enabled, created_at, updated_at
+                   enabled, disabled_message, created_at, updated_at
             """;
 
     private final JdbcClient jdbcClient;
@@ -42,9 +42,11 @@ public class AgentConfigRepository {
         jdbcClient.sql("""
                 INSERT INTO agent_config
                     (organization_id, name, mode, system_prompt, model, temperature,
-                     enabled_tools, top_k, similarity_threshold, max_context_chars, enabled)
+                     enabled_tools, top_k, similarity_threshold, max_context_chars, enabled,
+                     disabled_message)
                 VALUES (:organizationId, :name, :mode, :systemPrompt, :model, :temperature,
-                        :enabledTools, :topK, :similarityThreshold, :maxContextChars, :enabled)
+                        :enabledTools, :topK, :similarityThreshold, :maxContextChars, :enabled,
+                        :disabledMessage)
                 """)
                 .param("organizationId", config.organizationId())
                 .param("name", config.name())
@@ -57,6 +59,7 @@ public class AgentConfigRepository {
                 .param("similarityThreshold", config.similarityThreshold())
                 .param("maxContextChars", config.maxContextChars())
                 .param("enabled", config.enabled())
+                .param("disabledMessage", config.disabledMessage())
                 .update();
     }
 
@@ -73,6 +76,7 @@ public class AgentConfigRepository {
                     similarity_threshold = :similarityThreshold,
                     max_context_chars = :maxContextChars,
                     enabled = :enabled,
+                    disabled_message = :disabledMessage,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE organization_id = :organizationId
                 """)
@@ -87,6 +91,7 @@ public class AgentConfigRepository {
                 .param("similarityThreshold", config.similarityThreshold())
                 .param("maxContextChars", config.maxContextChars())
                 .param("enabled", config.enabled())
+                .param("disabledMessage", config.disabledMessage())
                 .update();
     }
 
@@ -104,6 +109,7 @@ public class AgentConfigRepository {
                 getNullableDouble(rs, "similarity_threshold"),
                 getNullableInt(rs, "max_context_chars"),
                 rs.getBoolean("enabled"),
+                rs.getString("disabled_message"),
                 toInstant(rs, "created_at"),
                 toInstant(rs, "updated_at"));
     }

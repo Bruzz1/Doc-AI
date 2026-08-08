@@ -54,6 +54,7 @@ public class AgentConfigService {
                 AgentMode.SIMPLE_RAG,
                 null, null, null, null, null, null, null,
                 true,
+                null,
                 null, null);
     }
 }

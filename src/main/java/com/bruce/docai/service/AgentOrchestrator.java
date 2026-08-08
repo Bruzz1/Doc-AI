@@ -22,30 +22,34 @@ import java.util.Map;
  *       delegating to {@link ChatService#getKnownInfo(String, String)}. Behaviorally
  *       identical to the pre-agent app.</li>
  *   <li>{@code AGENTIC} — builds a {@link ChatClient} from the configured system
- *       prompt, model, and temperature. Tool-calling (RAG as a tool) and conversation
- *       memory are attached in subsequent steps.</li>
+ *       prompt, model, and temperature. The tenant's configured tools (resolved via
+ *       {@link ToolRegistry} from {@code AgentConfig.enabledTools()}) and conversation
+ *       memory are attached.</li>
  * </ul>
  */
 @Service
 @Slf4j
 public class AgentOrchestrator {
 
+    static final String DEFAULT_DISABLED_MESSAGE =
+            "The assistant is currently unavailable. Please try again later.";
+
     private final AgentConfigService agentConfigService;
     private final ChatService chatService;
-    private final RagSearchTool ragSearchTool;
+    private final ToolRegistry toolRegistry;
     private final ConversationMemoryService conversationMemoryService;
     private final GuardrailService guardrailService;
     private final ChatClient chatClient;
 
     public AgentOrchestrator(AgentConfigService agentConfigService,
                              ChatService chatService,
-                             RagSearchTool ragSearchTool,
+                             ToolRegistry toolRegistry,
                              ConversationMemoryService conversationMemoryService,
                              GuardrailService guardrailService,
                              ChatClient.Builder chatClientBuilder) {
         this.agentConfigService = agentConfigService;
         this.chatService = chatService;
-        this.ragSearchTool = ragSearchTool;
+        this.toolRegistry = toolRegistry;
         this.conversationMemoryService = conversationMemoryService;
         this.guardrailService = guardrailService;
         this.chatClient = chatClientBuilder.build();
@@ -59,7 +63,8 @@ public class AgentOrchestrator {
 
         if (!config.enabled()) {
             log.info("Agent disabled for organization {}; returning unavailable message.", request.organizationId());
-            return "The assistant is currently unavailable. Please try again later.";
+            String message = config.disabledMessage();
+            return message == null || message.isBlank() ? DEFAULT_DISABLED_MESSAGE : message;
         }
 
         String input;
@@ -79,6 +84,14 @@ public class AgentOrchestrator {
         return guardrailService.enforceOutbound(reply);
     }
 
+    /**
+     * Clear the conversation history for the request's identity (the "new chat" reset).
+     * No-op for stateless SIMPLE_RAG semantics beyond clearing any stored memory.
+     */
+    public void resetConversation(ChatRequest request) {
+        conversationMemoryService.reset(request);
+    }
+
     private String handleAgentic(ChatRequest request, AgentConfig config, String input) {
         Conversation conversation = conversationMemoryService.resolve(request);
         List<Message> history = conversationMemoryService.loadHistory(conversation.id());
@@ -93,8 +106,11 @@ public class AgentOrchestrator {
         }
         spec = spec.user(input);
 
-        spec = spec.tools(ragSearchTool)
-                .toolContext(Map.of(RagSearchTool.ORGANIZATION_ID_KEY, request.organizationId()));
+        List<Object> tools = toolRegistry.resolve(config.enabledTools());
+        if (!tools.isEmpty()) {
+            spec = spec.tools(tools.toArray())
+                    .toolContext(Map.of(RagSearchTool.ORGANIZATION_ID_KEY, request.organizationId()));
+        }
 
         OllamaOptions options = buildOptions(config);
         if (options != null) {
