@@ -130,6 +130,32 @@ public class ChatService {
         return result.strip();
     }
 
+    /**
+     * Retrieve and format the most relevant knowledge-base context for a question,
+     * scoped to a tenant. Exposed for use as an agent tool ({@code RagSearchTool}) so
+     * AGENTIC mode can invoke retrieval on demand; returns a sentinel string when no
+     * usable context is found so the caller/LLM can react.
+     */
+    public String retrieveKnowledge(String question, String organizationId) {
+        String normalizedQuestion = normalizeUserInput(question);
+        if (normalizedQuestion.isBlank()) {
+            return "No search query was provided.";
+        }
+
+        List<Document> documents = findSimilarDocuments(normalizedQuestion, organizationId);
+        if (documents.isEmpty()) {
+            return "No relevant information was found in the knowledge base.";
+        }
+
+        String context = buildContext(documents);
+        if (context.isBlank()) {
+            return "No relevant information was found in the knowledge base.";
+        }
+
+        String sources = buildSources(documents);
+        return "SOURCES: " + sources + "\n\n" + context;
+    }
+
     List<Document> findSimilarDocuments(String question) {
         return findSimilarDocuments(question, null);
     }
