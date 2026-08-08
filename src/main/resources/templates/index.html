@@ -116,6 +116,9 @@
                     <a id="documents-menu-item" href="/admin/documents/page" class="user-dropdown__item" role="menuitem" style="display:none;">
                         Manage Documents
                     </a>
+                    <a id="agents-menu-item" href="/admin/agents/page" class="user-dropdown__item" role="menuitem" style="display:none;">
+                        Configure Assistant
+                    </a>
                     <button id="logout-btn" class="user-dropdown__item user-dropdown__item--danger" role="menuitem">
                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
                              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -182,6 +185,7 @@ const App = {
     userDropdownEmail: document.getElementById('user-dropdown-email'),
     invitesMenuItem: document.getElementById('invites-menu-item'),
     documentsMenuItem: document.getElementById('documents-menu-item'),
+    agentsMenuItem: document.getElementById('agents-menu-item'),
 };
 
 const Auth = {
@@ -232,6 +236,7 @@ const Auth = {
         if (me.role === 'ADMIN') {
             App.invitesMenuItem.style.display = 'flex';
             App.documentsMenuItem.style.display = 'flex';
+            App.agentsMenuItem.style.display = 'flex';
         }
     },
 

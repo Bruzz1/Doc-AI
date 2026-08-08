@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manage Agent - Admin</title>
+    <style>
+        body { margin: 0; background: #f3f5fb; color: #1e293b; font-family: Inter, Arial, sans-serif; }
+        .container { max-width: 820px; margin: auto; padding: 24px; }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-top: 20px; }
+        h1, h2 { margin-top: 0; }
+        .back { color: #1d4ed8; text-decoration: none; }
+        label { display: block; font-weight: 600; margin: 16px 0 6px; }
+        .hint { font-weight: 400; color: #64748b; font-size: .85rem; }
+        input[type=text], input[type=number], textarea, select {
+            width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 7px;
+            padding: 10px; font-size: .95rem; font-family: inherit;
+        }
+        textarea { min-height: 120px; resize: vertical; }
+        .row { display: flex; gap: 16px; flex-wrap: wrap; }
+        .row > div { flex: 1; min-width: 160px; }
+        button { border: 0; border-radius: 7px; padding: 11px 18px; font-weight: 600; cursor: pointer; }
+        button.primary { color: white; background: #1d4ed8; }
+        button:disabled { opacity: .6; cursor: not-allowed; }
+        #status { min-height: 20px; margin: 14px 0; }
+        .error { color: #b91c1c; } .success { color: #166534; }
+        .checkbox { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+        .checkbox input { width: auto; }
+        fieldset.agentic { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-top: 16px; }
+        fieldset.agentic legend { color: #64748b; font-size: .85rem; padding: 0 6px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back" href="/app">← Back to app</a>
+    <h1>Configure Assistant</h1>
+    <p>These settings drive every channel — the chat here, the website widget, and WhatsApp.
+        Changes apply immediately after saving.</p>
+
+    <section class="card">
+        <form id="agent-form">
+            <label for="name">Name</label>
+            <input id="name" type="text" maxlength="255" placeholder="Default Agent">
+
+            <label for="mode">Mode
+                <span class="hint">SIMPLE_RAG answers from documents in one step. AGENTIC lets the
+                    assistant decide when to search and remembers the conversation.</span>
+            </label>
+            <select id="mode">
+                <option value="SIMPLE_RAG">SIMPLE_RAG — retrieval only (default)</option>
+                <option value="AGENTIC">AGENTIC — tools + memory</option>
+            </select>
+
+            <fieldset class="agentic" id="agentic-fields">
+                <legend>AGENTIC settings</legend>
+
+                <label for="systemPrompt">System prompt
+                    <span class="hint">Persona and instructions for the assistant.</span>
+                </label>
+                <textarea id="systemPrompt" placeholder="You are a helpful assistant for our organization…"></textarea>
+
+                <div class="row">
+                    <div>
+                        <label for="model">Model <span class="hint">blank = default</span></label>
+                        <input id="model" type="text" placeholder="qwen2.5:3b">
+                    </div>
+                    <div>
+                        <label for="temperature">Temperature <span class="hint">0–1, blank = default</span></label>
+                        <input id="temperature" type="number" step="0.1" min="0" max="2">
+                    </div>
+                </div>
+
+                <label for="enabledTools">Enabled tools
+                    <span class="hint">Comma-separated. Currently: searchKnowledgeBase.</span>
+                </label>
+                <input id="enabledTools" type="text" placeholder="searchKnowledgeBase">
+            </fieldset>
+
+            <div class="checkbox">
+                <input id="enabled" type="checkbox" checked>
+                <label for="enabled" style="margin:0;">Assistant enabled</label>
+            </div>
+
+            <div id="status" aria-live="polite"></div>
+            <button class="primary" id="save" type="submit">Save configuration</button>
+        </form>
+    </section>
+</div>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const statusEl = $('status');
+const saveBtn = $('save');
+
+async function request(url, options = {}) {
+    const response = await fetch(url, { credentials: 'same-origin', ...options });
+    if (response.status === 401) { window.location.href = '/login'; throw new Error('Unauthorized'); }
+    return response;
+}
+function showStatus(message, type = '') { statusEl.textContent = message; statusEl.className = type; }
+
+function toggleAgentic() {
+    $('agentic-fields').style.display = $('mode').value === 'AGENTIC' ? 'block' : 'none';
+}
+
+function populate(config) {
+    $('name').value = config.name ?? '';
+    $('mode').value = config.mode ?? 'SIMPLE_RAG';
+    $('systemPrompt').value = config.systemPrompt ?? '';
+    $('model').value = config.model ?? '';
+    $('temperature').value = config.temperature ?? '';
+    $('enabledTools').value = config.enabledTools ?? '';
+    $('enabled').checked = config.enabled !== false;
+    toggleAgentic();
+}
+
+function numberOrNull(value) {
+    const v = String(value).trim();
+    return v === '' ? null : Number(v);
+}
+
+async function load() {
+    try {
+        const res = await request('/admin/agents');
+        if (!res.ok) throw new Error('Failed to load configuration.');
+        populate(await res.json());
+    } catch (e) {
+        showStatus(e.message, 'error');
+    }
+}
+
+$('mode').addEventListener('change', toggleAgentic);
+
+$('agent-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    saveBtn.disabled = true;
+    showStatus('Saving…');
+
+    const body = {
+        name: $('name').value.trim() || null,
+        mode: $('mode').value,
+        systemPrompt: $('systemPrompt').value.trim() || null,
+        model: $('model').value.trim() || null,
+        temperature: numberOrNull($('temperature').value),
+        enabledTools: $('enabledTools').value.trim() || null,
+        enabled: $('enabled').checked
+    };
+
+    try {
+        const res = await request('/admin/agents', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Save failed.');
+        populate(data);
+        showStatus('Configuration saved.', 'success');
+    } catch (e) {
+        showStatus(e.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+    }
+});
+
+load();
+</script>
+</body>
+</html>

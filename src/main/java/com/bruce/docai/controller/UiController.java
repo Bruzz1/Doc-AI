@@ -56,4 +56,10 @@ public class UiController {
     public String adminDocuments() {
         return "admin-documents";
     }
+
+    @GetMapping("/admin/agents/page")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String adminAgents() {
+        return "admin-agents";
+    }
 }
